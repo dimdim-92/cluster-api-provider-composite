@@ -1,0 +1,30 @@
+title = "Composite source-tree secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Local development state excluded from the source deliverable; tracked files in these paths are rejected by verify-hygiene"
+paths = [
+  '''^(\.git|\.tools|\.idea|\.vscode|\.claude|\.opencode|bin|out)(/|$)''',
+  '''^helm/charts/''',
+  '''^\.env(\..*)?$''',
+  '''^mgmt\.yaml$''',
+  '''^tests/integration/(kubeconfig|test-results/.*)$''',
+  '''^capi-composite-controller$''',
+]
+
+[[rules]]
+id = "generic-api-key"
+
+  [[rules.allowlists]]
+  description = "Verified public kube-api-linter Go pseudo-version, not a credential"
+  condition = "AND"
+  paths = ['''(^|/)hack/tools\.env$''']
+  regexTarget = "secret"
+  regexes = ['''^v0\.0\.0-20260416084302-2b3d1fe14578$''']
+
+[[rules]]
+id = "private-infrastructure-reference"
+description = "Private infrastructure endpoint must not enter the public source deliverable"
+regex = '''(?i)(?:[a-z0-9-]+\.)*(?:numspot\.internal|tooling\.[a-z0-9.-]+\.numspot\.cloud)'''

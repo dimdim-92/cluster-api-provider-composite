@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: capi-composite
+  namespace: capi-composite-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: capi-composite-local
+# Local dev only. The scoped installation role is generated in config/rbac/role.yaml
+# and shared with Helm through helm/templates/_generated-rbac.tpl.
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: capi-composite-local
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: capi-composite-local
+subjects:
+  - kind: ServiceAccount
+    name: capi-composite
+    namespace: capi-composite-system

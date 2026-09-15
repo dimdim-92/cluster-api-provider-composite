@@ -1,0 +1,119 @@
+# MSC owns this provider addon and expands its worker addonDefinitions.
+apiVersion: apiextensions.managedservice.numspot.com/v1alpha2
+kind: ManagedServiceClass
+metadata:
+  name: composite-outscale-provider-v1
+  namespace: cloud-kubernetes
+spec:
+  domain: kubernetes
+  resourceType: provider
+  canBeAddonFor:
+    - {name: kubernetes-composite-v1, namespace: cloud-kubernetes}
+  variables:
+    - name: nodePoolId
+      required: true
+      schema: {type: string, minLength: 1, maxLength: 37, pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'}
+    - name: clusterName
+      required: true
+      schema: {type: string, minLength: 1, maxLength: 57}
+    - name: infrastructureName
+      required: true
+      schema: {type: string, minLength: 1, maxLength: 63}
+    - name: clusterVersion
+      required: true
+      mutable: true
+      schema: {type: string, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$'}
+    - name: templateName
+      required: true
+      schema: {type: string, minLength: 1, maxLength: 253}
+    - name: credentialsSecretName
+      required: true
+      schema: {type: string, minLength: 1, maxLength: 253}
+    - name: attachment
+      schema: {type: string, default: osc-paris}
+    - name: availabilityZone
+      schema: {type: string, default: eu-west-2a}
+    - name: replicas
+      mutable: true
+      schema: {type: integer, minimum: 0, maximum: 100, default: 1}
+    - name: machineSpec
+      required: true
+      schema:
+        type: object
+        required: [node]
+        properties:
+          node:
+            type: object
+            required: [image, vm]
+            properties:
+              image: {type: object}
+              vm: {type: object}
+  resource:
+    provider:
+      apiVersion:
+        group: infrastructure.cluster.x-k8s.io
+        version: v1beta2
+        kind: CompositeProvider
+        resource: compositeproviders
+      manifest:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: CompositeProvider
+        metadata:
+          name: provider
+        spec:
+          clusterRef: {name: '${parameters.infrastructureName}'}
+          templateRef: {name: '${parameters.templateName}'}
+          credentialsRef: {name: '${parameters.credentialsSecretName}'}
+          infraSpec:
+            network:
+              clusterName: '${parameters.clusterName}'
+              internetService: {name: '${parameters.clusterName}'}
+  readyWhen:
+    - >-
+      has(self.resources['provider'].status.conditions) &&
+      self.resources['provider'].status.conditions.exists(c,
+        c.type == 'Ready' && c.status == 'True' &&
+        c.observedGeneration == self.resources['provider'].metadata.generation)
+    - >-
+      has(self.resources['provider'].status.bootstrapTemplateRef) &&
+      self.resources['provider'].status.infrastructureRef.kind == 'OscCluster'
+  exports:
+    - name: bootstrapTemplateName
+      expression: self.resources['provider'].status.bootstrapTemplateRef.name
+    - name: providerName
+      expression: self.resources['provider'].metadata.name
+  addonDefinitions:
+    - name: small
+      classRef: {name: composite-outscale-nodepool-v1, namespace: cloud-kubernetes}
+      default: true
+      variables:
+        - name: infrastructureName
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 63}
+      patches:
+        - name: provider-bootstrap
+          jsonPath: $.machineDeployment.spec.template.spec.bootstrap.configRef.name
+          expression: "parameters.infrastructureName + '-supplemental-' + parameters.nodePoolId + '-provider'"
+        - name: native-machine-template
+          jsonPath: $.machineDeployment.spec.template.spec.infrastructureRef.name
+          expression: "'supplemental-' + parameters.nodePoolId + '-small-omt'"
+        - name: native-vm-size
+          jsonPath: $.machineTemplate.spec.template.spec.node.vm.vmType
+          valueFrom: {value: tinav7.c2r4p2}
+    - name: medium
+      classRef: {name: composite-outscale-nodepool-v1, namespace: cloud-kubernetes}
+      default: true
+      variables:
+        - name: infrastructureName
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 63}
+      patches:
+        - name: provider-bootstrap
+          jsonPath: $.machineDeployment.spec.template.spec.bootstrap.configRef.name
+          expression: "parameters.infrastructureName + '-supplemental-' + parameters.nodePoolId + '-provider'"
+        - name: native-machine-template
+          jsonPath: $.machineDeployment.spec.template.spec.infrastructureRef.name
+          expression: "'supplemental-' + parameters.nodePoolId + '-medium-omt'"
+        - name: native-vm-size
+          jsonPath: $.machineTemplate.spec.template.spec.node.vm.vmType
+          valueFrom: {value: tinav7.c4r8p2}

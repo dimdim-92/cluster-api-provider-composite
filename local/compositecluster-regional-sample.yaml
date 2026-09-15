@@ -1,0 +1,131 @@
+# Additional Warsaw profile and a three-attachment composition.
+# Apply compositeprovider-templates.yaml and compositeprovider-sample.yaml first for Outscale and Paris.
+# Provide regional native credentials and the named hosted control plane.
+# Workers remain native MachineDeployments/MachineTemplates; use explicit regional
+# identities, network/subnet/security-group settings and each attachment's KCT.
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OpenStackClusterTemplate
+metadata:
+  name: openstack-account-a-waw-r1
+  namespace: composite-templates
+spec:
+  template:
+    spec:
+      apiServerLoadBalancer:
+        enabled: false
+      disableAPIServerFloatingIP: true
+      disableExternalNetwork: true
+      identityRef:
+        type: Secret
+        name: openstack-account-a-waw1
+        cloudName: openstack-waw
+        region: WAW1
+      managedSubnets:
+        - cidr: 10.7.0.0/24
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+kind: KubeadmConfigTemplate
+metadata:
+  name: openstack-waw-bootstrap-r1
+  namespace: composite-templates
+spec:
+  template:
+    spec:
+      format: cloud-config
+      joinConfiguration:
+        nodeRegistration:
+          name: "{{ ds.meta_data.local_hostname }}"
+          imagePullPolicy: IfNotPresent
+          kubeletExtraArgs:
+            - name: provider-id
+              value: "openstack:///{{ ds.meta_data.uuid }}"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProviderTemplate
+metadata:
+  name: openstack-account-a-waw-r1
+spec:
+  provider: openstack
+  account: account-a
+  region: WAW1
+  infraClusterKind:
+    apiGroup: infrastructure.cluster.x-k8s.io
+    kind: OpenStackCluster
+  endpointPaths: [spec.controlPlaneEndpoint, spec.apiServerFixedIP, spec.apiServerPort]
+  infrastructureTemplateRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: OpenStackClusterTemplate
+    namespace: composite-templates
+    name: openstack-account-a-waw-r1
+  bootstrapTemplateRef:
+    apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+    kind: KubeadmConfigTemplate
+    namespace: composite-templates
+    name: openstack-waw-bootstrap-r1
+  overridePolicy:
+    infraSpecPaths: [/managedSubnets]
+    protectedInfraSpecPaths:
+      - /identityRef
+      - /apiServerLoadBalancer
+      - /disableAPIServerFloatingIP
+      - /disableExternalNetwork
+    bootstrapPaths: [/files, /preKubeadmCommands]
+    protectedBootstrapPaths: [/joinConfiguration/nodeRegistration/kubeletExtraArgs]
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  name: tenant-regional
+  namespace: default
+spec:
+  infrastructureRef:
+    apiGroup: infrastructure.cluster.x-k8s.io
+    kind: CompositeCluster
+    name: tenant-regional
+  controlPlaneRef:
+    apiGroup: controlplane.cluster.x-k8s.io
+    kind: KamajiControlPlane
+    name: tenant-regional-control-plane
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeCluster
+metadata:
+  name: tenant-regional
+  namespace: default
+spec: {}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProvider
+metadata:
+  name: tenant-regional-outscale
+  namespace: default
+spec:
+  clusterRef: {name: tenant-regional}
+  templateRef:
+    name: outscale-account-a-r1
+  infraSpec:
+    network:
+      clusterName: tenant-regional
+      internetService:
+        name: tenant-regional
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProvider
+metadata:
+  name: tenant-regional-paris
+  namespace: default
+spec:
+  clusterRef: {name: tenant-regional}
+  templateRef:
+    name: openstack-account-a-r1
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProvider
+metadata:
+  name: tenant-regional-varsovie
+  namespace: default
+spec:
+  clusterRef: {name: tenant-regional}
+  templateRef:
+    name: openstack-account-a-waw-r1
+  infraClusterName: tenant-regional-varsovie-infra

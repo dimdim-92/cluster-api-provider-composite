@@ -1,0 +1,17 @@
+# Hosted-control-plane-first example. No CompositeProviders are needed initially.
+# Create CompositeProvider resources later in kubernetes-cluster-empty-demo.
+apiVersion: apiextensions.managedservice.numspot.com/v1alpha2
+kind: ManagedServiceInstance
+metadata:
+  name: empty-demo
+  namespace: cloud-kubernetes
+spec:
+  classRef:
+    name: kubernetes-composite-v1
+    namespace: cloud-kubernetes
+  overlayRefs:
+    - name: composite-demo-v1
+      namespace: cloud-kubernetes
+  overrides:
+    - name: clusterId
+      value: empty-demo

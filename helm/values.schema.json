@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "fullnameOverride": {"type": "string", "maxLength": 55, "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"},
+    "replicaCount": {"type": "integer", "minimum": 1},
+    "image": {
+      "type": "object",
+      "required": ["repository", "pullPolicy"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "tag": {"type": "string"},
+        "digest": {"type": "string", "pattern": "^$|^sha256:[a-f0-9]{64}$"},
+        "pullPolicy": {"enum": ["Always", "IfNotPresent", "Never"]}
+      },
+      "additionalProperties": false
+    },
+    "imagePullSecrets": {"type": "array", "items": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+    "serviceAccount": {"type": "object", "properties": {"create": {"type": "boolean"}, "name": {"type": "string"}}, "required": ["create", "name"], "additionalProperties": false},
+    "watchNamespace": {"type": "string", "maxLength": 63, "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"},
+    "watchFilter": {"type": "string", "maxLength": 63, "pattern": "^$|^[a-zA-Z0-9]([a-zA-Z0-9_.-]*[a-zA-Z0-9])?$"},
+    "leaderElection": {"type": "boolean"},
+    "metrics": {"type": "object", "properties": {"port": {"type": "integer", "minimum": 1, "maximum": 65535}, "insecure": {"type": "boolean"}, "existingSecret": {"type": "string"}}, "required": ["port", "insecure", "existingSecret"], "additionalProperties": false},
+    "healthPort": {"type": "integer", "minimum": 1, "maximum": 65535},
+    "resources": {"type": "object"},
+    "nodeSelector": {"type": "object", "additionalProperties": {"type": "string"}},
+    "tolerations": {"type": "array", "items": {"type": "object"}},
+    "affinity": {"type": "object"},
+    "extraArgs": {"type": "array", "items": {"type": "string"}},
+    "extraEnv": {"type": "array", "items": {"type": "object", "required": ["name"]}},
+    "additionalRBACRules": {"type": "array", "items": {"type": "object", "required": ["verbs"]}}
+  },
+  "additionalProperties": false
+}

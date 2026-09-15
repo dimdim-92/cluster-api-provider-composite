@@ -1,0 +1,47 @@
+# Standalone provider attachments for instance.yaml; apply on the service cluster.
+# Provision namespace-local native credentials before applying.
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProvider
+metadata:
+  name: ovh-paris
+  namespace: kubernetes-cluster-demo
+spec:
+  clusterRef: {name: cluster-demo-infra}
+  templateRef:
+    name: ovh-paris-account-a-v1
+  infraClusterName: cluster-demo-infra
+  infraSpec:
+    managedSubnets:
+      - cidr: 10.6.0.0/24
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProvider
+metadata:
+  name: ovh-varsovie
+  namespace: kubernetes-cluster-demo
+spec:
+  clusterRef: {name: cluster-demo-infra}
+  templateRef:
+    name: ovh-varsovie-account-a-v1
+  infraClusterName: cluster-demo-ovh-varsovie-infra
+  infraSpec:
+    managedSubnets:
+      - cidr: 10.7.0.0/24
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProvider
+metadata:
+  name: osc-paris
+  namespace: kubernetes-cluster-demo
+spec:
+  clusterRef: {name: cluster-demo-infra}
+  templateRef:
+    name: osc-paris-account-a-v1
+  infraClusterName: cluster-demo-infra
+  infraSpec:
+    network:
+      clusterName: cluster-demo
+      internetService:
+        name: cluster-demo
+      net:
+        ipRange: 10.42.0.0/16

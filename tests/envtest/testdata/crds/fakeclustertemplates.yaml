@@ -1,0 +1,32 @@
+# A mutable stand-in source template for source-generation drift regressions.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: fakeclustertemplates.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: FakeClusterTemplate
+    listKind: FakeClusterTemplateList
+    plural: fakeclustertemplates
+    singular: fakeclustertemplate
+  scope: Namespaced
+  versions:
+    - name: v1beta1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: [template]
+              properties:
+                template:
+                  type: object
+                  required: [spec]
+                  properties:
+                    spec:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true

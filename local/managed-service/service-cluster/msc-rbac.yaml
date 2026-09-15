@@ -1,0 +1,23 @@
+# Supplemental permissions for the identity MSC uses on the service cluster.
+# Bind this role to that identity in your installation; it is not a replacement
+# for MSC's namespace/watch/import permissions. The subject depends on your setup.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: managed-service-composite
+rules:
+  - apiGroups: [cluster.x-k8s.io]
+    resources: [clusters, machinedeployments]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [cluster.x-k8s.io]
+    resources: [clusterclasses, machines]
+    verbs: [get, list, watch]
+  - apiGroups: [infrastructure.cluster.x-k8s.io]
+    resources: [compositeproviders, oscmachinetemplates, openstackmachinetemplates]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [infrastructure.cluster.x-k8s.io]
+    resources: [compositeclusters, oscclusters, openstackclusters]
+    verbs: [get, list, watch]
+  - apiGroups: [controlplane.cluster.x-k8s.io]
+    resources: [kamajicontrolplanes]
+    verbs: [get, list, watch]

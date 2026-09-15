@@ -1,0 +1,143 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.22.0
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-composite
+    cluster.x-k8s.io/v1beta2: v1beta2
+  name: compositeclustertemplates.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: CompositeClusterTemplate
+    listKind: CompositeClusterTemplateList
+    plural: compositeclustertemplates
+    shortNames:
+    - cct
+    singular: compositeclustertemplate
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta2
+    schema:
+      openAPIV3Schema:
+        description: |-
+          CompositeClusterTemplate is the Schema for the compositeclustertemplates API.
+
+          It exists so a ClusterClass can reference us as its infrastructure template.
+          Adopting capi-composite in the existing Numspot ClusterClass is a one-line swap
+          of OscClusterTemplate for CompositeClusterTemplate.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec is the immutable infrastructure template.
+            properties:
+              template:
+                description: |-
+                  template is immutable, matching the webhook-enforced behaviour of CAPO and
+                  CAPOSC templates. Expressed as a CEL rule so no webhook is needed for it.
+                properties:
+                  metadata:
+                    description: metadata contains the labels and annotations applied
+                      to the generated resource.
+                    minProperties: 1
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: annotations are propagated to generated CompositeClusters.
+                        minProperties: 0
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: labels are propagated to generated CompositeClusters.
+                        minProperties: 0
+                        type: object
+                    type: object
+                  spec:
+                    description: spec is the desired infrastructure composition.
+                    minProperties: 0
+                    properties:
+                      bootstrap:
+                        description: |-
+                          bootstrap is the ONE shared worker bootstrap payload — a
+                          bootstrap.cluster.x-k8s.io/v1beta2 KubeadmConfigTemplate
+                          spec.template.spec (kubeletExtraArgs as a list of {name, value}),
+                          authored upstream: files, preKubeadmCommands, node labels, everything
+                          provider-independent.
+
+                          For each provider it is merged with that provider's bootstrap overlay
+                          (RFC 7386) and minted as a stable KubeadmConfigTemplate named
+                          "<cluster>-<provider>", which that provider's MachineDeployments
+                          reference. Minting happens only after EndpointPropagated: the kubeadm
+                          bootstrap provider renders join commands from the settled endpoint, and
+                          Cluster.spec.controlPlaneEndpoint is copy-once. The minted templates are
+                          updated in place on payload changes and affect new machines only.
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                      controlPlaneEndpoint:
+                        description: |-
+                          controlPlaneEndpoint is part of the CAPI InfraCluster contract.
+
+                          It is written by the Kamaji control plane provider, which patches exactly
+                          ONE object: whichever is named in Cluster.spec.infrastructureRef. A
+                          cluster spanning clouds has several InfraClusters, all of which need the
+                          endpoint, so we fan it out to every child through each provider's
+                          endpointPaths. That fan-out is the load-bearing reason this is a
+                          delegator at all.
+                        minProperties: 1
+                        properties:
+                          host:
+                            description: host is the hostname on which the API server
+                              is serving.
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          port:
+                            description: port is the port on which the API server
+                              is serving.
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                        type: object
+                    type: object
+                required:
+                - spec
+                type: object
+                x-kubernetes-validations:
+                - message: CompositeClusterTemplate spec.template is immutable
+                  rule: self == oldSelf
+            required:
+            - template
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}

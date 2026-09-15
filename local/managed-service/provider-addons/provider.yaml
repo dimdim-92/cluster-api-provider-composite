@@ -1,0 +1,14 @@
+# Reference output only: MSC creates this in its parent MSI's target namespace.
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProvider
+metadata:
+  name: supplemental-osc-paris-provider
+  namespace: kubernetes-cluster-empty-demo
+spec:
+  clusterRef: {name: cluster-empty-demo-infra}
+  templateRef: {name: osc-paris-addon-v1}
+  credentialsRef: {name: outscale-account-a-eu-west-2}
+  infraSpec:
+    network:
+      clusterName: cluster-empty-demo
+      internetService: {name: cluster-empty-demo}

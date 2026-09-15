@@ -1,0 +1,152 @@
+# A new Cluster with Outscale and OpenStack profile-backed attachments.
+# Apply source templates and compositeprovider-sample.yaml first. Supply the named KamajiControlPlane,
+# native credentials, images and cross-provider networking before creating workers.
+# The Outscale profile is also reused by compositecluster-sample.yaml.
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  name: tenant-spanning
+  namespace: default
+spec:
+  infrastructureRef:
+    apiGroup: infrastructure.cluster.x-k8s.io
+    kind: CompositeCluster
+    name: tenant-spanning
+  controlPlaneRef:
+    apiGroup: controlplane.cluster.x-k8s.io
+    kind: KamajiControlPlane
+    name: tenant-spanning-control-plane
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeCluster
+metadata:
+  name: tenant-spanning
+  namespace: default
+spec: {}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProvider
+metadata:
+  name: tenant-spanning-outscale
+  namespace: default
+spec:
+  clusterRef: {name: tenant-spanning}
+  templateRef:
+    name: outscale-account-a-r1
+  infraSpec:
+    network:
+      clusterName: tenant-spanning
+      internetService:
+        name: tenant-spanning
+      net:
+        ipRange: 10.0.0.0/16
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProvider
+metadata:
+  name: tenant-spanning-openstack
+  namespace: default
+spec:
+  clusterRef: {name: tenant-spanning}
+  templateRef:
+    name: openstack-account-a-r1
+  infraSpec:
+    managedSubnets:
+      - cidr: 10.6.0.0/24
+
+# Each native pool selects its own MachineTemplate and the matching generated
+# bootstrap template: tenant-spanning-tenant-spanning-outscale or tenant-spanning-tenant-spanning-openstack.
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OscMachineTemplate
+metadata:
+  name: tenant-spanning-osc
+  namespace: default
+spec:
+  template:
+    spec:
+      node:
+        image:
+          name: replace-with-kubernetes-omi
+        vm:
+          clusterName: tenant-spanning
+          keypairName: replace-with-keypair
+          rootDisk:
+            rootDiskSize: 30
+            rootDiskType: standard
+          subregionName: eu-west-2a
+          vmType: tinav7.c4r8p2
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: MachineDeployment
+metadata:
+  name: tenant-spanning-osc
+  namespace: default
+  labels:
+    cluster.x-k8s.io/cluster-name: tenant-spanning
+spec:
+  clusterName: tenant-spanning
+  replicas: 1
+  selector: {}
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: tenant-spanning
+    spec:
+      clusterName: tenant-spanning
+      version: v1.34.10
+      failureDomain: eu-west-2a
+      bootstrap:
+        configRef:
+          apiGroup: bootstrap.cluster.x-k8s.io
+          kind: KubeadmConfigTemplate
+          name: tenant-spanning-tenant-spanning-outscale
+      infrastructureRef:
+        apiGroup: infrastructure.cluster.x-k8s.io
+        kind: OscMachineTemplate
+        name: tenant-spanning-osc
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OpenStackMachineTemplate
+metadata:
+  name: tenant-spanning-ovh
+  namespace: default
+spec:
+  template:
+    spec:
+      flavor: b3-16
+      image:
+        filter:
+          name: Ubuntu 24.04
+      ports:
+        - network:
+            filter:
+              name: Ext-Net
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: MachineDeployment
+metadata:
+  name: tenant-spanning-ovh
+  namespace: default
+  labels:
+    cluster.x-k8s.io/cluster-name: tenant-spanning
+spec:
+  clusterName: tenant-spanning
+  replicas: 1
+  selector: {}
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: tenant-spanning
+    spec:
+      clusterName: tenant-spanning
+      version: v1.34.10
+      bootstrap:
+        configRef:
+          apiGroup: bootstrap.cluster.x-k8s.io
+          kind: KubeadmConfigTemplate
+          name: tenant-spanning-tenant-spanning-openstack
+      infrastructureRef:
+        apiGroup: infrastructure.cluster.x-k8s.io
+        kind: OpenStackMachineTemplate
+        name: tenant-spanning-ovh

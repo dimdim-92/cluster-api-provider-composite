@@ -1,0 +1,32 @@
+name: Bug report
+description: Report a reproducible non-security problem.
+body:
+  - type: markdown
+    attributes:
+      value: "For vulnerabilities, follow SECURITY.md and arrange a private report with a maintainer. Do not include credentials or customer payloads here."
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions and installation
+      description: Composite revision/image, Kubernetes, CAPI and native provider versions; Helm or clusterctl.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Steps and sanitized resource shapes. Identify which objects already existed.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and observed behavior
+      description: Include relevant conditions and object identities, with sensitive data removed.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Verification and evidence
+      description: Commands/tests actually run, their results, and whether the issue involves real native controllers or test fixtures.

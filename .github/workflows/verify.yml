@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      release-version:
+        description: Exact release version; retain tested images for same-run publication.
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -30,6 +36,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Set up pinned tools and envtest
         id: tools
@@ -71,6 +78,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Set up pinned tools
         uses: ./.github/actions/setup-tools
@@ -80,41 +88,79 @@ jobs:
         run: make verify-packaging
 
   docker:
-    name: docker build and smoke test
+    name: docker build and smoke test (${{ matrix.arch }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(inputs.release-version != '' && '["amd64","arm64"]' || '["amd64"]') }}
+    env:
+      BUILD_VERSION: ${{ inputs.release-version || format('ci-{0}', github.sha) }}
     steps:
       - name: Checkout
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Set up QEMU for the arm64 smoke test
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
       - name: Set up Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
         with:
           buildkitd-config-inline: |
             [registry."docker.io"]
               mirrors = ["mirror.gcr.io"]
-      - name: Build Composite image (local, no push)
+      - name: Build Composite image once (local, no push)
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           file: build/operator.Dockerfile
-          platforms: linux/amd64
+          platforms: linux/${{ matrix.arch }}
           push: false
           load: true
-          tags: composite-ci:${{ github.sha }}
-          cache-from: type=gha,scope=composite-operator
-          cache-to: type=gha,scope=composite-operator,mode=max
+          tags: composite-ci:${{ github.sha }}-${{ matrix.arch }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.BUILD_VERSION }}
+          cache-from: type=gha,scope=composite-operator-${{ matrix.arch }}
+          cache-to: type=gha,scope=composite-operator-${{ matrix.arch }},mode=max
           build-args: |
-            version=ci-${{ github.sha }}
+            version=${{ env.BUILD_VERSION }}
             revision=${{ github.sha }}
-      - name: Smoke-test version and runtime restrictions
+      - name: Smoke-test the exact image version and runtime restrictions
         shell: bash
         env:
-          IMAGE: composite-ci:${{ github.sha }}
-          EXPECTED_VERSION: ci-${{ github.sha }}
+          IMAGE: composite-ci:${{ github.sha }}-${{ matrix.arch }}
+          ARCH: ${{ matrix.arch }}
+          EXPECTED_VERSION: ${{ env.BUILD_VERSION }}
         run: |
           set -euo pipefail
-          version="$(docker run --rm --read-only --network none --cap-drop ALL \
+          version="$(docker run --rm --platform "linux/$ARCH" --read-only --network none --cap-drop ALL \
             --security-opt no-new-privileges "$IMAGE" --version)"
           test "$version" = "$EXPECTED_VERSION"
+      - name: Export the tested image and its immutable identity
+        if: inputs.release-version != ''
+        shell: bash
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          artifact="$RUNNER_TEMP/operator-image"
+          mkdir -p "$artifact"
+          image="composite-ci:$GITHUB_SHA-$ARCH"
+          docker image save "$image" --output "$artifact/image.tar"
+          docker image inspect "$image" --format '{{.Id}}' > "$artifact/image.id"
+          printf '%s\n' "$GITHUB_SHA" > "$artifact/commit.sha"
+          printf '%s\n' "$BUILD_VERSION" > "$artifact/version"
+      - name: Retain the tested release image for scanning and publication
+        if: inputs.release-version != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: operator-${{ github.sha }}-${{ matrix.arch }}
+          path: ${{ runner.temp }}/operator-image/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7

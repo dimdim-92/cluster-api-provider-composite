@@ -134,11 +134,13 @@ func TestGitHubSecurityScansBothModulesAndGatesSARIFUploads(t *testing.T) {
 func TestGitHubReleasePublishesOnlyAfterValidationAndImages(t *testing.T) {
 	workflow := readWorkflow(t, "release")
 	assert.Equal(t, map[string]string{"contents": "read"}, workflow.Permissions)
-	assert.Equal(t, []any{"validate", "verify", "security"}, workflow.Jobs["images"].Needs)
+	assert.Equal(t, []any{"validate", "verify", "security"}, workflow.Jobs["draft"].Needs)
+	assert.Equal(t, []any{"validate", "verify", "security", "draft"}, workflow.Jobs["images"].Needs)
 	assert.Equal(t, []any{"validate", "images"}, workflow.Jobs["package"].Needs)
-	assert.Equal(t, []any{"validate", "package"}, workflow.Jobs["artifacts"].Needs)
+	assert.Equal(t, []any{"validate", "package", "draft"}, workflow.Jobs["artifacts"].Needs)
 	assert.Equal(t, []any{"validate", "package"}, workflow.Jobs["chart"].Needs)
-	for _, name := range []string{"images", "artifacts", "chart"} {
+	assert.Equal(t, []any{"validate", "images", "draft", "artifacts", "chart"}, workflow.Jobs["publish"].Needs)
+	for _, name := range []string{"draft", "images", "artifacts", "chart", "publish"} {
 		assert.Equal(t, "release", workflow.Jobs[name].Environment, "publication needs an independently protected environment")
 	}
 	for _, step := range workflow.Jobs["validate"].Steps {
@@ -161,11 +163,12 @@ func TestGitHubReleasePublishesOnlyAfterValidationAndImages(t *testing.T) {
 
 func TestReleaseReusesVerificationAndPromotesOnlySameRunArtifacts(t *testing.T) {
 	workflow := readWorkflow(t, "release")
-	require.Contains(t, workflow.On, "release")
-	assert.NotContains(t, workflow.On, "push", "a tag alone must not publish a second time")
-	releaseTrigger, ok := workflow.On["release"].(map[string]any)
+	require.Contains(t, workflow.On, "push")
+	require.Contains(t, workflow.On, "workflow_dispatch")
+	assert.NotContains(t, workflow.On, "release", "publishing the complete draft must never restart staging")
+	tagTrigger, ok := workflow.On["push"].(map[string]any)
 	require.True(t, ok)
-	assert.Equal(t, []any{"published"}, releaseTrigger["types"], "publish stable AND alpha releases")
+	assert.Equal(t, []any{"v*"}, tagTrigger["tags"], "stage stable AND alpha version tags")
 	assert.Equal(t, "./.github/workflows/verify.yml", workflow.Jobs["verify"].Uses)
 	assert.Equal(t, "validate", workflow.Jobs["verify"].Needs)
 	assert.Equal(t, "${{ needs.validate.outputs.version }}", workflow.Jobs["verify"].With["release-version"])
@@ -211,6 +214,68 @@ func TestReleaseReusesVerificationAndPromotesOnlySameRunArtifacts(t *testing.T) 
 	}
 }
 
+func TestGoReleaserStagesDraftAssetsWithoutPublishing(t *testing.T) {
+	data, err := os.ReadFile("../.goreleaser.yaml")
+	require.NoError(t, err)
+	var config struct {
+		Release struct {
+			Draft                    bool   `json:"draft"`
+			UseExistingDraft         bool   `json:"use_existing_draft"`
+			ReplaceExistingDraft     bool   `json:"replace_existing_draft"`
+			ReplaceExistingArtifacts bool   `json:"replace_existing_artifacts"`
+			NameTemplate             string `json:"name_template"`
+			Mode                     string `json:"mode"`
+			Preflight                struct {
+				FailOnError bool `json:"fail_on_error"`
+			} `json:"preflight"`
+		} `json:"release"`
+	}
+	require.NoError(t, yaml.Unmarshal(data, &config))
+	assert.True(t, config.Release.Draft)
+	assert.True(t, config.Release.UseExistingDraft)
+	assert.False(t, config.Release.ReplaceExistingDraft, "never delete/recreate the reviewed release identity")
+	assert.True(t, config.Release.ReplaceExistingArtifacts, "draft-only staging retries may replace incomplete uploads")
+	assert.Equal(t, "{{ .Tag }}", config.Release.NameTemplate)
+	assert.Equal(t, "keep-existing", config.Release.Mode)
+	assert.True(t, config.Release.Preflight.FailOnError)
+}
+
+func TestReleaseBindsDraftIdentityBeforeStagingAndFinalization(t *testing.T) {
+	workflow := readWorkflow(t, "release")
+	assert.Equal(t, map[string]string{"contents": "write"}, workflow.Jobs["draft"].Permissions)
+	assert.Equal(t, "read", workflow.Jobs["images"].Permissions["contents"], "image publication does not need GitHub release write access")
+	draft := releaseStep(t, workflow, "draft", "draft")
+	assert.Contains(t, draft.Run, "hack/publish-release.sh check-draft")
+	stage := releaseStep(t, workflow, "artifacts", "draft")
+	assert.Contains(t, stage.Run, "hack/publish-release.sh check-draft")
+	assert.Equal(t, "${{ needs.draft.outputs.release_id }}", stage.Env["RELEASE_ID"])
+	publish := releaseStep(t, workflow, "publish", "publish")
+	assert.Equal(t, "bash hack/publish-release.sh", publish.Run)
+	assert.Equal(t, "${{ needs.draft.outputs.release_id }}", publish.Env["RELEASE_ID"])
+	assert.Equal(t, "${{ needs.validate.outputs.prerelease }}", publish.Env["PRERELEASE"])
+	assert.Equal(t, map[string]string{"contents": "write"}, workflow.Jobs["publish"].Permissions)
+	guarded := false
+	for _, step := range workflow.Jobs["artifacts"].Steps {
+		if step.ID == "draft" {
+			guarded = true
+		}
+		if strings.HasPrefix(step.Uses, "goreleaser/goreleaser-action@") {
+			assert.True(t, guarded, "recheck the live draft immediately before replace-existing artifact uploads")
+		}
+	}
+}
+
+func releaseStep(t *testing.T, workflow githubWorkflow, job, id string) githubStep {
+	t.Helper()
+	for _, step := range workflow.Jobs[job].Steps {
+		if step.ID == id {
+			return step
+		}
+	}
+	t.Fatalf("missing step %s/%s", job, id)
+	return githubStep{}
+}
+
 func TestReleaseCheckoutsPinTheEventCommit(t *testing.T) {
 	for _, name := range []string{"release", "verify", "security"} {
 		for jobName, job := range readWorkflow(t, name).Jobs {
@@ -230,29 +295,31 @@ func TestReleaseGuardRejectsWrongEventRefAndUnreviewedCommit(t *testing.T) {
 	require.Equal(t, "./.github/actions/setup-tools", steps[2].Uses)
 	sha := strings.Repeat("a", 40)
 	for _, tc := range []struct {
-		name, event, action, draft, ref, tagSHA, ancestry string
+		name, event, deleted, ref, tagSHA, kind, ancestry string
 		wantError                                         bool
 	}{
-		{name: "published", event: "release", action: "published", draft: "false", ref: "refs/tags/v0.1.0", tagSHA: sha, ancestry: "0"},
-		{name: "tag-push", event: "push", action: "published", draft: "false", ref: "refs/tags/v0.1.0", tagSHA: sha, ancestry: "0", wantError: true},
-		{name: "wrong-action", event: "release", action: "edited", draft: "false", ref: "refs/tags/v0.1.0", tagSHA: sha, ancestry: "0", wantError: true},
-		{name: "draft", event: "release", action: "published", draft: "true", ref: "refs/tags/v0.1.0", tagSHA: sha, ancestry: "0", wantError: true},
-		{name: "wrong-ref", event: "release", action: "published", draft: "false", ref: "refs/heads/main", tagSHA: sha, ancestry: "0", wantError: true},
-		{name: "moved-tag", event: "release", action: "published", draft: "false", ref: "refs/tags/v0.1.0", tagSHA: strings.Repeat("b", 40), ancestry: "0", wantError: true},
-		{name: "not-on-main", event: "release", action: "published", draft: "false", ref: "refs/tags/v0.1.0", tagSHA: sha, ancestry: "1", wantError: true},
+		{name: "tag-push", event: "push", ref: "refs/tags/v0.1.0", tagSHA: sha, kind: "tag", ancestry: "0"},
+		{name: "tag-dispatch", event: "workflow_dispatch", ref: "refs/tags/v0.1.0", tagSHA: sha, kind: "tag", ancestry: "0"},
+		{name: "published-event", event: "release", ref: "refs/tags/v0.1.0", tagSHA: sha, kind: "tag", ancestry: "0", wantError: true},
+		{name: "pull-request", event: "pull_request", ref: "refs/tags/v0.1.0", tagSHA: sha, kind: "tag", ancestry: "0", wantError: true},
+		{name: "deleted-tag", event: "push", deleted: "true", ref: "refs/tags/v0.1.0", tagSHA: sha, kind: "tag", ancestry: "0", wantError: true},
+		{name: "branch-dispatch", event: "workflow_dispatch", ref: "refs/heads/main", tagSHA: sha, kind: "tag", ancestry: "0", wantError: true},
+		{name: "lightweight-tag", event: "push", ref: "refs/tags/v0.1.0", tagSHA: sha, kind: "commit", ancestry: "0", wantError: true},
+		{name: "moved-tag", event: "push", ref: "refs/tags/v0.1.0", tagSHA: strings.Repeat("b", 40), kind: "tag", ancestry: "0", wantError: true},
+		{name: "not-on-main", event: "push", ref: "refs/tags/v0.1.0", tagSHA: sha, kind: "tag", ancestry: "1", wantError: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
-			git := "#!/bin/sh\ncase \"$1\" in\ncheck-ref-format) exit 0;;\nrev-parse) printf '%s\\n' \"$TEST_TAG_SHA\";;\nmerge-base) exit \"$TEST_ANCESTRY\";;\n*) exit 2;;\nesac\n"
+			git := "#!/bin/sh\ncase \"$1\" in\ncheck-ref-format) exit 0;;\ncat-file) printf '%s\\n' \"$TEST_TAG_KIND\";;\nrev-parse) printf '%s\\n' \"$TEST_TAG_SHA\";;\nmerge-base) exit \"$TEST_ANCESTRY\";;\n*) exit 2;;\nesac\n"
 			require.NoError(t, os.WriteFile(filepath.Join(dir, "git"), []byte(git), 0o700))
 			t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 			t.Setenv("GITHUB_EVENT_NAME", tc.event)
-			t.Setenv("RELEASE_ACTION", tc.action)
-			t.Setenv("RELEASE_DRAFT", tc.draft)
+			t.Setenv("TAG_DELETED", tc.deleted)
 			t.Setenv("TAG", "v0.1.0")
 			t.Setenv("GITHUB_REF", tc.ref)
 			t.Setenv("GITHUB_SHA", sha)
 			t.Setenv("TEST_TAG_SHA", tc.tagSHA)
+			t.Setenv("TEST_TAG_KIND", tc.kind)
 			t.Setenv("TEST_ANCESTRY", tc.ancestry)
 			output, err := exec.CommandContext(t.Context(), "bash", "-c", steps[1].Run).CombinedOutput()
 			if tc.wantError {
@@ -264,34 +331,32 @@ func TestReleaseGuardRejectsWrongEventRefAndUnreviewedCommit(t *testing.T) {
 	}
 }
 
-func TestReleasePrereleaseStateMatchesTheValidatedVersion(t *testing.T) {
-	var release githubStep
-	for _, step := range readWorkflow(t, "release").Jobs["validate"].Steps {
-		if step.ID == "release" {
-			release = step
-		}
-	}
-	require.NotEmpty(t, release.Run)
+func TestReleaseCandidateTagMatchesTheSourceVersion(t *testing.T) {
+	release := releaseStep(t, readWorkflow(t, "release"), "validate", "release")
 	for _, tc := range []struct {
-		name, tag, prerelease string
-		wantError             bool
+		name, tag, source, prerelease string
+		wantError                     bool
 	}{
-		{name: "stable", tag: "v0.1.0", prerelease: "false"},
-		{name: "alpha", tag: "v0.1.0-alpha.3", prerelease: "true"},
-		{name: "stable-marked-prerelease", tag: "v0.1.0", prerelease: "true", wantError: true},
-		{name: "alpha-marked-stable", tag: "v0.1.0-alpha.3", prerelease: "false", wantError: true},
-		{name: "missing-state", tag: "v0.1.0", wantError: true},
+		{name: "stable", tag: "v0.1.0", source: "0.1.0", prerelease: "false"},
+		{name: "alpha", tag: "v0.1.0-alpha.3", source: "0.1.0-alpha.3", prerelease: "true"},
+		{name: "old-alpha-source", tag: "v0.1.0", source: "0.1.0-alpha.2", wantError: true},
+		{name: "different-release", tag: "v0.1.1", source: "0.1.0", wantError: true},
+		{name: "missing-manifest", tag: "v0.1.0", wantError: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
 			require.NoError(t, os.Mkdir(filepath.Join(dir, "hack"), 0o700))
-			// Isolate event-state policy; check-release's own tests exercise strict SemVer and metadata.
+			// Isolate source/tag policy; check-release's tests exercise strict SemVer and metadata.
 			verifier := "#!/bin/sh\ntest \"$VERSION\" = \"$TAG\" && test \"$IMAGE\" = \"ghcr.io/numspot/cluster-api-provider-composite:$TAG\"\n"
 			require.NoError(t, os.WriteFile(filepath.Join(dir, "hack", "verify-version.sh"), []byte(verifier), 0o600))
+			if tc.source != "" {
+				manifest, err := json.Marshal(map[string]string{".": tc.source})
+				require.NoError(t, err)
+				require.NoError(t, os.WriteFile(filepath.Join(dir, ".release-please-manifest.json"), manifest, 0o600))
+			}
 			outputPath := filepath.Join(dir, "output")
 			require.NoError(t, os.WriteFile(outputPath, nil, 0o600))
 			t.Setenv("TAG", tc.tag)
-			t.Setenv("RELEASE_PRERELEASE", tc.prerelease)
 			t.Setenv("GITHUB_REPOSITORY", "Numspot/Cluster-API-Provider-Composite")
 			t.Setenv("GITHUB_OUTPUT", outputPath)
 			cmd := exec.CommandContext(t.Context(), "bash", "-c", release.Run)
@@ -301,10 +366,14 @@ func TestReleasePrereleaseStateMatchesTheValidatedVersion(t *testing.T) {
 			require.NoError(t, readErr)
 			if tc.wantError {
 				require.Error(t, err, "%s", log)
-				assert.Empty(t, data, "invalid state must not enable downstream publication")
+				assert.Empty(t, data, "a mismatched source must not enable downstream publication")
 			} else {
 				require.NoError(t, err, "%s", log)
-				assert.Equal(t, "version="+tc.tag+"\nimage=ghcr.io/numspot/cluster-api-provider-composite\n", string(data))
+				assert.Equal(
+					t,
+					"version="+tc.tag+"\nimage=ghcr.io/numspot/cluster-api-provider-composite\nprerelease="+tc.prerelease+"\n",
+					string(data),
+				)
 			}
 		})
 	}
@@ -370,6 +439,7 @@ func TestReleasePleaseRequiresCompleteAppConfiguration(t *testing.T) {
 	}
 	assert.Equal(t, "${{ steps.app-token.outputs.token }}", steps[2].With["token"], "do not fall back to a token that suppresses follow-up workflows")
 	assert.Equal(t, "main", steps[2].With["target-branch"], "release the triggering branch, not a different repository default")
+	assert.Equal(t, true, steps[2].With["skip-github-release"], "the PR bot must not publish before immutable assets are staged")
 
 	for _, tc := range []struct {
 		name, appID, privateKey, configured string
@@ -439,6 +509,7 @@ func TestReleasePleaseKeepsOneProviderAndChartVersion(t *testing.T) {
 	var config struct {
 		Packages map[string]struct {
 			Prerelease            bool   `json:"prerelease"`
+			Draft                 bool   `json:"draft"`
 			Versioning            string `json:"versioning"`
 			PrereleaseType        string `json:"prerelease-type"`
 			IncludeVInTag         bool   `json:"include-v-in-tag"`
@@ -450,9 +521,10 @@ func TestReleasePleaseKeepsOneProviderAndChartVersion(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(configData, &config))
 	require.Len(t, config.Packages, 1)
-	assert.True(t, config.Packages["."].Prerelease)
-	assert.Equal(t, "prerelease", config.Packages["."].Versioning)
-	assert.Equal(t, "alpha", config.Packages["."].PrereleaseType)
+	assert.False(t, config.Packages["."].Prerelease, "normal release PRs must produce stable tags")
+	assert.True(t, config.Packages["."].Draft, "release tooling must leave publication to the final protected job")
+	assert.Equal(t, "default", config.Packages["."].Versioning)
+	assert.Empty(t, config.Packages["."].PrereleaseType)
 	assert.True(t, config.Packages["."].IncludeVInTag)
 	assert.False(t, config.Packages["."].IncludeComponentInTag)
 	paths := make([]string, 0, len(config.Packages["."].ExtraFiles))

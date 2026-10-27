@@ -10,12 +10,6 @@ Project rationale and the bootstrap approach are recorded in the
 [ADR-0002](architecture/decisions/0002-cncf-sigs-conventions.md) records the
 CNCF/SIG, contribution and distribution conventions.
 
-The editable [template-backed provider diagram](template-backed-providers.drawio)
-has four pages: architecture, validation/reconciliation, native regional workers,
-and ownership/teardown. It shows source UID/generation checks and
-administrator-retained templates, with examples matching the
-[managed-service manifests](usage.md#managed-service-manifests).
-
 ## Resources and ownership
 
 ```text
@@ -186,7 +180,8 @@ into new records or treat status as replacement identity.
 Ordinary source spec edits and recreation are detected; metadata-only changes are
 allowed. The profile spec is immutable and is pinned by UID only, since deletion
 can bump its generation. New UIDs do not match even for identical content; transparent
-restore/move and automatic conversion of old profile pins are unsupported in this alpha.
+restore/move and automatic conversion of old profile pins are unsupported in this
+pre-1.0 provider.
 
 Status cannot authorize adoption or reconstruct a lost attachment/source pin.
 Incomplete ownership or identity evidence stops reconciliation rather than guessing
@@ -224,13 +219,21 @@ CompositeProvider and CompositeProviderTemplate advertise only provider identity
 are shared by Helm and clusterctl. The [GitHub automation](development.md#github-automation)
 validates both Go modules and generated outputs without repairing working source.
 One provider release version ties together the operator image/binaries, Helm chart
-and clusterctl assets; the [release-event workflow](../.github/workflows/release.yml)
-checks tag/commit identity, main ancestry and declared CAPI release-series support,
-then requires reusable CI/Security gates before publication. Tested images are
+and clusterctl assets; the [draft-first release workflow](../.github/workflows/release.yml)
+checks annotated tag/source identity, main ancestry and declared CAPI release-series
+support, then requires CI/Security and the reviewed draft's identity before staging.
+Only the final protected job publishes the completed draft and verifies immutability. Tested images are
 promoted without rebuilding; both installation formats pin the resulting multiarch
 digest and both chart publishers reuse one archive. Repository tag/environment
 protections remain required. These pipelines do not deploy clusters or change
 controller/runtime semantics.
+
+[clusterctl registration](../clusterctl.yaml) adds the custom `composite`
+infrastructure provider without changing CAPI's built-in catalog. Versioned
+components include the controller, four CRDs and RBAC; metadata maps provider
+series 0.1 to CAPI contract v1beta2. clusterctl handles namespace rewriting, labels
+and its separate Provider inventory. Concrete component defaults need no optional
+watch-filter variable; native credentials and workloads remain caller-managed.
 
 `CompositeCluster`, `CompositeProvider` and `CompositeProviderTemplate` expose status subresources;
 `CompositeClusterTemplate` does not. Profile status reports `ConfigurationValid`

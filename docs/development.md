@@ -37,8 +37,8 @@ is no UI bundle, deployment step or private workflow/chart dependency.
 | [CI](../.github/workflows/verify.yml) | Independent Go, Helm/Kustomize and Docker jobs; source/API/generated checks, vet, build, race/envtest tests, coverage and restricted image smoke tests; reusable for releases |
 | [Commit Lint](../.github/workflows/commit-lint.yml) | Conventional Commits and PR titles, including the eventual squash subject |
 | [Security](../.github/workflows/security.yml) | Both-module govulncheck/gosec, source hygiene and Trivy filesystem/IaC/image scans; weekly and manually dispatchable as well as PR/main runs |
-| [release-please](../.github/workflows/release-please.yml) | Maintains an alpha release PR from Conventional Commits on main once GitHub App credentials are configured |
-| [Release](../.github/workflows/release.yml) | On published GitHub Releases, validates immutable tag/commit identity and series, reuses CI/Security gates, then promotes tested images and shared digest-pinned installation assets |
+| [release-please](../.github/workflows/release-please.yml) | Maintains stable release PRs from Conventional Commits on main once GitHub App credentials are configured |
+| [Release](../.github/workflows/release.yml) | On annotated version tags, validates source/commit/series, reuses CI/Security, stages tested artifacts in a bound draft and publishes it immutable only after every upload succeeds |
 
 Actions are pinned to immutable SHAs. The shared [tool setup](../.github/actions/setup-tools/action.yml)
 reads [tool pins](../hack/tools.env); Go caching covers both module checksums.
@@ -56,6 +56,14 @@ both GitHub and OCI; `make helm-package VERSION=... IMAGE=...` stages image defa
 in scratch, without modifying source values or CRDs. Offline tests in
 [hack](../hack/) cover event/ref gates, artifact identity and packaging behavior.
 
+A protected metadata gate binds the unique reviewed draft's numeric ID before any
+registry writes. GoReleaser stages only into that same live draft and preserves
+its notes. The final protected job verifies all eight uploads and the tag again,
+publishes, and requires immutable-release evidence. Offline fake-GitHub tests cover
+pagination, name/tag collisions, recreated drafts, incomplete assets and safe
+verification-only retries. The optional release-please action maintains PRs only;
+maintainers prepare the draft and annotated tag in the documented order.
+
 Security scan findings are not suppressed: govulncheck and fixable high/critical
 image findings fail their jobs. Gosec and filesystem/IaC findings are advisory
 reports, matching the upstream workflow. SARIF is always retained as workflow
@@ -66,6 +74,17 @@ report fields and exact JSON numbers so Code Scanning links/fingerprints work. C
 trusted non-PR events. Reusable release scans retain per-architecture reports without
 Code Scanning uploads. No release App credentials are exposed to pull requests. Secret
 scanning uses the existing pinned gitleaks CLI and needs no action license.
+
+The [clusterctl provider config](../clusterctl.yaml) registers the custom
+infrastructure provider. Release manifests and provider metadata are validated
+with the real clusterctl processing path, including namespace/RBAC rewriting and
+an unset watch-filter default. Local repositories are generated in scratch for
+tests; their absolute paths must not become public registration URLs. The envtest
+Init regression uses the real installer/inventory client and checks repeat-init
+idempotency. Only cert-manager initialization is stubbed because envtest runs no
+pods; deployment availability and native-cloud provisioning are not established
+by that test. Test-only clusterctl dependencies stay in the root module, never the
+consumer API module. Focused checks use `make test TEST=TestClusterctl`.
 
 See [release setup](operations.md#automated-releases) before enabling publishing.
 A workflow definition does not prove a GitHub run or a publication has succeeded.
@@ -231,7 +250,7 @@ make build
 make docker-build PLATFORM=linux/arm64 IMAGE=composite:dev
 make docker-build-multiarch IMAGE=composite:dev
 make release-manifests VERSION="$VERSION" IMAGE="$IMAGE"
-make helm-package VERSION=v0.1.0-alpha.1
+make helm-package VERSION=v0.1.0
 ```
 
 Images use pinned public builder/runtime bases and run non-root. These commands

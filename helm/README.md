@@ -32,7 +32,7 @@ adapt this `composite-values.yaml` to your registry and release:
 ```yaml
 image:
   repository: registry.example.com/team/cluster-api-provider-composite
-  tag: v0.1.0-alpha.1
+  tag: v0.1.0
   digest: "" # Clear a packaged release's digest when intentionally selecting a tag.
 # For private images, provision this pull Secret in the release namespace:
 # imagePullSecrets:
@@ -76,8 +76,8 @@ removed from the chart version. A matching chart archive is attached to the GitH
 release; both destinations receive the same archive. Its image defaults pin the
 actual published repository and multiarch digest. Packaging stages these defaults
 in scratch without changing source values or CRDs. Release-please keeps
-chart/appVersion and the provider candidate in sync. The alpha manifest is only a
-starting version; it does not mean any package exists.
+chart/appVersion and the provider release version in sync. A version in the source
+manifest does not by itself mean any package exists.
 
 See [release setup and artifacts](../docs/operations.md#automated-releases) for
 repository permissions, package visibility and matching-image rules. Helm still

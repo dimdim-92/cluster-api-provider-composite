@@ -10,7 +10,10 @@ After a successful automated release, install the matching GitHub/OCI artifacts 
 explained in [automated releases](operations.md#automated-releases). Image, chart
 and clusterctl assets share a provider version; candidate source versions do not
 prove publication. None of the release workflows creates providers, worker pools
-or workload clusters on your behalf.
+or workload clusters on your behalf. Choose either the
+[clusterctl installation](operations.md#clusterctl), using the checked-in custom
+provider config and a published version, or Helm—not both for the same controller.
+clusterctl's provider inventory is installation metadata, not a provider attachment.
 
 Select the management kubeconfig for this shell before running the examples:
 
@@ -341,8 +344,8 @@ templates and a new profile for new consumers. Existing provider names, cluster/
 template/credential references and native names cannot be rebound. Revisions do
 not advance existing pins; deleting a provider retires its identity safely.
 
-The source-reference schema replaces embedded profile `defaults` in this pre-release
-API. It does not automatically migrate previously created profiles or hash-based
+The source-reference schema replaces embedded profile `defaults` in this pre-1.0
+provider API. It does not automatically migrate previously created profiles or hash-based
 bindings. Back up existing resources before changing CRDs; use fresh revisions and
 consumers for evaluation. See [recovery](operations.md#recovery).
 

@@ -1,9 +1,11 @@
 name: Release
 
 on:
-  # published includes alpha prereleases; a tag push alone never publishes.
-  release:
-    types: [published]
+  # A reviewed draft must exist before its annotated version tag is pushed.
+  push:
+    tags: ["v*"]
+  # Recovery only: dispatch against the version tag, never a branch ref.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,6 +29,7 @@ jobs:
     outputs:
       version: ${{ steps.release.outputs.version }}
       image: ${{ steps.release.outputs.image }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
     steps:
       - name: Checkout exact release commit and main history
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -34,20 +37,19 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Require a published, unchanged tag on main before repository tools
+      - name: Require an unchanged annotated tag on main before repository tools
         id: guard
         shell: bash
         env:
-          TAG: ${{ github.event.release.tag_name }}
-          RELEASE_ACTION: ${{ github.event.action }}
-          RELEASE_DRAFT: ${{ github.event.release.draft }}
+          TAG: ${{ github.ref_name }}
+          TAG_DELETED: ${{ github.event.deleted }}
         run: |
           set -euo pipefail
-          test "$GITHUB_EVENT_NAME" = release
-          test "$RELEASE_ACTION" = published
-          test "$RELEASE_DRAFT" = false
+          case "$GITHUB_EVENT_NAME" in push|workflow_dispatch) ;; *) exit 1 ;; esac
+          test "${TAG_DELETED:-false}" != true
           test "$GITHUB_REF" = "refs/tags/$TAG"
           git check-ref-format "refs/tags/$TAG"
+          test "$(git cat-file -t "refs/tags/$TAG")" = tag
           test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$GITHUB_SHA"
           git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
       - name: Set up pinned tools
@@ -55,23 +57,22 @@ jobs:
         uses: ./.github/actions/setup-tools
         with:
           helm: "true"
-      - name: Validate SemVer, prerelease policy and CAPI release series
+      - name: Validate SemVer, source version and CAPI release series
         id: release
         shell: bash
         env:
-          TAG: ${{ github.event.release.tag_name }}
-          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+          TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           image="ghcr.io/$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
           VERSION="$TAG" IMAGE="$image:$TAG" sh hack/verify-version.sh
-          case "$TAG" in
-            *-*) test "$RELEASE_PRERELEASE" = true ;;
-            *) test "$RELEASE_PRERELEASE" = false ;;
-          esac
+          source_version="$(jq -er '.["."] | select(type == "string" and length > 0)' .release-please-manifest.json)"
+          test "$source_version" = "${TAG#v}"
+          case "$TAG" in *-*) prerelease=true ;; *) prerelease=false ;; esac
           {
             echo "version=$TAG"
             echo "image=$image"
+            echo "prerelease=$prerelease"
           } >> "$GITHUB_OUTPUT"
       - name: Preflight release manifests, packaged chart and embedded version without publishing
         shell: bash
@@ -109,9 +110,35 @@ jobs:
     with:
       release-version: ${{ needs.validate.outputs.version }}
 
+  draft:
+    name: Verify the reviewed draft before any publication
+    needs: [validate, verify, security]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: release
+    # GitHub draft visibility requires push access; verification jobs remain read-only.
+    permissions:
+      contents: write
+    outputs:
+      release_id: ${{ steps.draft.outputs.release_id }}
+    steps:
+      - name: Checkout exact verified source
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Bind the unique reviewed draft and unchanged tag
+        id: draft
+        shell: bash
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          PRERELEASE: ${{ needs.validate.outputs.prerelease }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash hack/publish-release.sh check-draft
+
   images:
     name: Publish the exact tested operator images
-    needs: [validate, verify, security]
+    needs: [validate, verify, security, draft]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: release
@@ -208,8 +235,8 @@ jobs:
           retention-days: 7
 
   artifacts:
-    name: Publish binaries and clusterctl assets
-    needs: [validate, package]
+    name: Stage binaries and installation assets in the reviewed draft
+    needs: [validate, package, draft]
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     environment: release
@@ -230,7 +257,16 @@ jobs:
         with:
           name: release-package-${{ github.sha }}
           path: out
-      - name: Publish binaries, checksums and the unchanged installation assets
+      - name: Recheck the bound draft immediately before staging uploads
+        id: draft
+        shell: bash
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          PRERELEASE: ${{ needs.validate.outputs.prerelease }}
+          RELEASE_ID: ${{ needs.draft.outputs.release_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash hack/publish-release.sh check-draft
+      - name: Stage binaries, checksums and unchanged installation assets without publishing
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
         with:
           version: ${{ steps.tools.outputs.goreleaser }}
@@ -274,3 +310,39 @@ jobs:
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           printf '%s' "$GHCR_TOKEN" | helm registry login ghcr.io -u "$GHCR_USER" --password-stdin
           helm push "out/cluster-api-provider-composite-${VERSION#v}.tgz" "oci://ghcr.io/$owner/charts"
+
+  publish:
+    name: Publish the complete draft and verify immutable assets
+    needs: [validate, images, draft, artifacts, chart]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout exact verified source
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Publish only the complete bound draft
+        id: publish
+        shell: bash
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          PRERELEASE: ${{ needs.validate.outputs.prerelease }}
+          RELEASE_ID: ${{ needs.draft.outputs.release_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash hack/publish-release.sh
+      - name: Record the verified immutable release
+        shell: bash
+        env:
+          RELEASE_URL: ${{ steps.publish.outputs.url }}
+          VERSION: ${{ needs.validate.outputs.version }}
+          IMAGE: ${{ needs.validate.outputs.image }}@${{ needs.images.outputs.digest }}
+        run: |
+          {
+            printf '### Immutable release %s\n\n' "$VERSION"
+            printf 'Release: %s\n\nCommit: %s\n\n' "$RELEASE_URL" "$GITHUB_SHA"
+            printf 'Image: %s\n\nAll expected assets uploaded; immutability verified.\n' "$IMAGE"
+          } >> "$GITHUB_STEP_SUMMARY"

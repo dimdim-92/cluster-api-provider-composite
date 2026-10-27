@@ -32,6 +32,7 @@ func TestRun_ValidatesReleaseInputs(t *testing.T) {
 		),
 	)
 	require.NoError(t, run("v0.1.0-alpha.1", "example.org/composite:v0.1.0-alpha.1"))
+	require.NoError(t, run("v0.1.0", "example.org/composite:v0.1.0"))
 	for _, version := range []string{"0.1.0", "v0.1.0-alpha..1", "v0.2.0", "v01.1.0"} {
 		require.Error(t, run(version, "example.org/composite:dev"), version)
 	}

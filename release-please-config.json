@@ -7,9 +7,10 @@
       "release-type": "go",
       "include-component-in-tag": false,
       "include-v-in-tag": true,
-      "prerelease": true,
-      "versioning": "prerelease",
-      "prerelease-type": "alpha",
+      "prerelease": false,
+      "draft": true,
+      "force-tag-creation": false,
+      "versioning": "default",
       "extra-files": [
         { "type": "generic", "path": "Makefile" },
         { "type": "generic", "path": "helm/Chart.yaml" }

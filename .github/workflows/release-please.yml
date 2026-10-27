@@ -34,8 +34,8 @@ jobs:
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
-      # App-authored release PRs and tags trigger CI/release workflows; events
-      # created with the default GITHUB_TOKEN would otherwise be suppressed.
+      # The App maintains version/changelog PRs. A maintainer prepares the reviewed
+      # draft and annotated tag; the tag-push workflow owns immutable publication.
       - name: Generate scoped GitHub App token
         id: app-token
         if: steps.app-config.outputs.configured == 'true'
@@ -46,11 +46,12 @@ jobs:
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
           permission-pull-requests: write
-      - name: Maintain release PR and create alpha release
+      - name: Maintain version and changelog PRs
         if: steps.app-config.outputs.configured == 'true'
         uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
         with:
           token: ${{ steps.app-token.outputs.token }}
           target-branch: main
+          skip-github-release: true
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json

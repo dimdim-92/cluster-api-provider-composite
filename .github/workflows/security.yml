@@ -1,0 +1,244 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  GOWORK: "off"
+  GOFLAGS: -mod=readonly
+  GOTOOLCHAIN: local
+  GOPROXY: https://proxy.golang.org,direct
+
+jobs:
+  govulncheck:
+    name: govulncheck (${{ matrix.module }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [".", api]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - name: Set up pinned tools
+        id: tools
+        uses: ./.github/actions/setup-tools
+      - name: Install govulncheck
+        env:
+          TOOL_VERSION: ${{ steps.tools.outputs.govulncheck }}
+        run: go install "golang.org/x/vuln/cmd/govulncheck@$TOOL_VERSION"
+      - name: Scan module
+        working-directory: ${{ matrix.module }}
+        run: govulncheck ./...
+
+  gosec:
+    name: gosec (${{ matrix.name }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [".", api]
+        include:
+          - module: "."
+            name: root
+          - module: api
+            name: api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - name: Set up pinned tools
+        id: tools
+        uses: ./.github/actions/setup-tools
+      - name: Install gosec
+        env:
+          TOOL_VERSION: ${{ steps.tools.outputs.gosec }}
+        run: go install "github.com/securego/gosec/v2/cmd/gosec@$TOOL_VERSION"
+      - name: Scan module (advisory findings)
+        working-directory: ${{ matrix.module }}
+        run: gosec -fmt sarif -out "$GITHUB_WORKSPACE/gosec.sarif" -no-fail -exclude-generated ./...
+      - name: Rebase API findings to repository-relative source paths
+        if: matrix.module == 'api' && hashFiles('gosec.sarif') != ''
+        run: go run ./hack/normalize-sarif -prefix api < gosec.sarif > gosec-api.sarif
+      - name: Upload scan report
+        if: always() && hashFiles('gosec.sarif') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gosec-${{ matrix.name }}
+          path: ${{ matrix.module == 'api' && 'gosec-api.sarif' || 'gosec.sarif' }}
+
+  gitleaks:
+    name: gitleaks and workflow hygiene
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - name: Set up pinned tools
+        uses: ./.github/actions/setup-tools
+      # Use the existing pinned CLI: no organization-only action license needed.
+      - name: Scan deliverable source and validate workflow syntax
+        run: make verify-hygiene
+
+  trivy-fs:
+    name: trivy (filesystem, IaC and Helm)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - name: Set up pinned tools
+        id: tools
+        uses: ./.github/actions/setup-tools
+      - name: Scan filesystem (advisory findings)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ steps.tools.outputs.trivy }}
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          limit-severities-for-sarif: true
+          skip-dirs: .git,.tools,bin,out
+      - name: Scan IaC and Helm (advisory findings)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ steps.tools.outputs.trivy }}
+          scan-type: config
+          scan-ref: .
+          format: sarif
+          output: trivy-config.sarif
+          severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
+          skip-dirs: .git,.tools,bin,out
+      - name: Upload scan reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: trivy-source
+          path: |
+            trivy-fs.sarif
+            trivy-config.sarif
+          if-no-files-found: ignore
+
+  trivy-image:
+    name: trivy (operator image)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - name: Set up pinned tools
+        id: tools
+        uses: ./.github/actions/setup-tools
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+        with:
+          buildkitd-config-inline: |
+            [registry."docker.io"]
+              mirrors = ["mirror.gcr.io"]
+      - name: Build image (local, no push)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          file: build/operator.Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: composite:scan
+          cache-from: type=gha,scope=composite-operator
+          build-args: |
+            version=ci-${{ github.sha }}
+            revision=${{ github.sha }}
+      - name: Scan image (fail on fixable high/critical findings)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ steps.tools.outputs.trivy }}
+          image-ref: composite:scan
+          format: sarif
+          output: trivy-image.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          limit-severities-for-sarif: true
+          exit-code: "1"
+      - name: Upload scan report
+        if: always() && hashFiles('trivy-image.sarif') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: trivy-image
+          path: trivy-image.sarif
+
+  code-scanning:
+    name: Code Scanning (${{ matrix.category }})
+    needs: [gosec, trivy-fs, trivy-image]
+    # Scanners and all PR jobs keep read-only tokens. Only this trusted,
+    # explicitly enabled upload job can write to Code Scanning.
+    if: >-
+      always() && vars.ENABLE_CODE_SCANNING == 'true' &&
+      github.event_name != 'pull_request' && github.actor != 'release-please[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact: gosec-root
+            file: gosec.sarif
+            category: gosec-root
+          - artifact: gosec-api
+            file: gosec-api.sarif
+            category: gosec-api
+          - artifact: trivy-source
+            file: trivy-fs.sarif
+            category: trivy-fs
+          - artifact: trivy-source
+            file: trivy-config.sarif
+            category: trivy-config
+          - artifact: trivy-image
+            file: trivy-image.sarif
+            category: trivy-image
+    steps:
+      - name: Checkout trusted source
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - name: Download scan report from this run
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: security-reports
+      - name: Upload findings to Code Scanning
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        with:
+          sarif_file: security-reports/${{ matrix.file }}
+          category: ${{ matrix.category }}

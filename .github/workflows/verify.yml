@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  GOWORK: "off"
+  GOFLAGS: -mod=readonly
+  GOTOOLCHAIN: local
+  GOPROXY: https://proxy.golang.org,direct
+
+jobs:
+  check:
+    name: lint, vet, build, test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - name: Set up pinned tools and envtest
+        id: tools
+        uses: ./.github/actions/setup-tools
+        with:
+          lint: "true"
+          helm: "true"
+          envtest: "true"
+      - name: Verify source, generated outputs and APIs
+        run: make verify-headers verify-api-deps verify-generated verify-crd-labels lint lint-api
+      - name: go vet (both modules)
+        run: |
+          go vet ./...
+          (cd api && go vet ./...)
+      - name: go build
+        run: make build
+      - name: Validate release configuration
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
+        with:
+          version: ${{ steps.tools.outputs.goreleaser }}
+          args: check
+      - name: go test (race, coverage and envtest)
+        run: make test COVERPROFILE=coverage.out
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage
+          path: |
+            coverage.out
+            api/coverage.out
+          if-no-files-found: ignore
+
+  helm:
+    name: helm lint and installation renders
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - name: Set up pinned tools
+        uses: ./.github/actions/setup-tools
+        with:
+          helm: "true"
+      - name: Verify Helm and clusterctl packaging
+        run: make verify-packaging
+
+  docker:
+    name: docker build and smoke test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+        with:
+          buildkitd-config-inline: |
+            [registry."docker.io"]
+              mirrors = ["mirror.gcr.io"]
+      - name: Build Composite image (local, no push)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          file: build/operator.Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: composite-ci:${{ github.sha }}
+          cache-from: type=gha,scope=composite-operator
+          cache-to: type=gha,scope=composite-operator,mode=max
+          build-args: |
+            version=ci-${{ github.sha }}
+            revision=${{ github.sha }}
+      - name: Smoke-test version and runtime restrictions
+        shell: bash
+        env:
+          IMAGE: composite-ci:${{ github.sha }}
+          EXPECTED_VERSION: ci-${{ github.sha }}
+        run: |
+          set -euo pipefail
+          version="$(docker run --rm --read-only --network none --cap-drop ALL \
+            --security-opt no-new-privileges "$IMAGE" --version)"
+          test "$version" = "$EXPECTED_VERSION"

@@ -1,0 +1,3 @@
+# Host-binary packaging must not send source, kubeconfigs or private local state.
+**
+!capi-composite-controller

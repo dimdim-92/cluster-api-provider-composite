@@ -1,0 +1,3 @@
+# The debug image receives only its host-built binary; the debugger is fetched publicly.
+**
+!capi-composite-controller

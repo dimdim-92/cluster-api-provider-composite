@@ -1,0 +1,21 @@
+# Apply on MSC's management cluster after instance-empty.yaml is ready.
+apiVersion: apiextensions.managedservice.numspot.com/v1alpha2
+kind: ManagedServiceSupplementalAddon
+metadata:
+  name: osc-paris
+  namespace: cloud-kubernetes
+spec:
+  instanceRef: {name: empty-demo}
+  classRef: {name: composite-outscale-provider-v1, namespace: cloud-kubernetes}
+  parameters:
+    nodePoolId: osc-paris
+    clusterName: cluster-empty-demo
+    infrastructureName: cluster-empty-demo-infra
+    clusterVersion: v1.34.10
+    templateName: osc-paris-addon-v1
+    credentialsSecretName: outscale-account-a-eu-west-2
+    availabilityZone: eu-west-2a
+    replicas: "1"
+    machineSpec: >-
+      {"node":{"image":{"name":"replace-with-kubernetes-ready-image"},
+       "vm":{"keypairName":"replace-with-keypair","rootDisk":{"rootDiskSize":30,"rootDiskType":"standard"}}}}

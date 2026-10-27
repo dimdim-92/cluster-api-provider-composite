@@ -1,0 +1,4 @@
+# Add verified GitHub users or teams after the maintainers confirm their identities
+# and consent. The inherited GitLab section syntax and handles are not valid
+# GitHub ownership evidence. No automatic owner assignment is claimed yet.
+# See MAINTAINERS.md for contact and ownership setup.

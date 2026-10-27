@@ -1,0 +1,77 @@
+name: Set up Composite tools
+description: Install the Go toolchain and optional tools pinned in hack/tools.env.
+inputs:
+  lint:
+    description: Install golangci-lint for source and API checks.
+    default: "false"
+  helm:
+    description: Install the pinned Helm binary with checksum verification.
+    default: "false"
+  envtest:
+    description: Download the pinned isolated Kubernetes test assets.
+    default: "false"
+outputs:
+  govulncheck:
+    description: Pinned govulncheck version.
+    value: ${{ steps.versions.outputs.govulncheck }}
+  gosec:
+    description: Pinned gosec version.
+    value: ${{ steps.versions.outputs.gosec }}
+  trivy:
+    description: Pinned Trivy version.
+    value: ${{ steps.versions.outputs.trivy }}
+  goreleaser:
+    description: Pinned GoReleaser version.
+    value: ${{ steps.versions.outputs.goreleaser }}
+runs:
+  using: composite
+  steps:
+    - name: Read pinned tool versions
+      id: versions
+      shell: bash
+      run: |
+        set -euo pipefail
+        # shellcheck disable=SC1091
+        source hack/tools.env
+        {
+          echo "go=$GO_VERSION"
+          echo "lint=$GOLANGCI_LINT_VERSION"
+          echo "helm=$HELM_VERSION"
+          echo "govulncheck=$GOVULNCHECK_VERSION"
+          echo "gosec=$GOSEC_VERSION"
+          echo "trivy=$TRIVY_VERSION"
+          echo "goreleaser=$GORELEASER_VERSION"
+        } >> "$GITHUB_OUTPUT"
+    - name: Set up Go
+      uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+      with:
+        go-version: ${{ steps.versions.outputs.go }}
+        cache-dependency-path: |
+          go.sum
+          api/go.sum
+    - name: Install golangci-lint
+      if: inputs.lint == 'true'
+      shell: bash
+      env:
+        LINT_VERSION: ${{ steps.versions.outputs.lint }}
+      run: go install "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v${LINT_VERSION}"
+    - name: Install Helm
+      if: inputs.helm == 'true'
+      shell: bash
+      env:
+        HELM_VERSION: ${{ steps.versions.outputs.helm }}
+      run: |
+        set -euo pipefail
+        archive="$RUNNER_TEMP/helm.tar.gz"
+        url="https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+        curl --fail --silent --show-error --location "$url" --output "$archive"
+        checksum="$(curl --fail --silent --show-error --location "${url}.sha256")"
+        printf '%s  %s\n' "$checksum" "$archive" | sha256sum --check --status
+        tar -xzf "$archive" -C "$RUNNER_TEMP"
+        mkdir -p "$HOME/.local/bin"
+        install "$RUNNER_TEMP/linux-amd64/helm" "$HOME/.local/bin/helm"
+        printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+    - name: Download envtest assets
+      if: inputs.envtest == 'true'
+      shell: bash
+      run: make envtest-download

@@ -1,0 +1,9 @@
+apiVersion: v2
+name: cluster-api-provider-composite
+description: A Helm chart for the capi-composite Cluster API infrastructure provider
+type: application
+version: 0.1.0-alpha.2 # x-release-please-version
+appVersion: "v0.1.0-alpha.2" # x-release-please-version
+home: https://github.com/numspot/cluster-api-provider-composite
+sources:
+  - https://github.com/numspot/cluster-api-provider-composite

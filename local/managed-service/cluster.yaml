@@ -1,0 +1,26 @@
+# Expected Cluster rendered from instance.yaml + management-cluster/overlay.yaml.
+# For a direct CAPI trial only: do not apply alongside the MSI for the same cluster.
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  name: cluster-demo
+  namespace: kubernetes-cluster-demo
+spec:
+  topology:
+    classRef:
+      name: composite-v1
+      namespace: composite-templates
+    version: v1.34.10
+    controlPlane:
+      replicas: 1
+    variables:
+      - name: controlPlaneNetwork
+        value:
+          serviceType: LoadBalancer
+      - name: datastoreName
+        value: default
+  clusterNetwork:
+    pods:
+      cidrBlocks: [172.16.0.0/16]
+    services:
+      cidrBlocks: [10.96.0.0/12]

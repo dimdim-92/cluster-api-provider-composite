@@ -1,0 +1,8 @@
+# Expected infrastructure stamped by CAPI from the ClusterClass template.
+# Reference output only: CAPI supplies ownership and manages this resource.
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeCluster
+metadata:
+  name: cluster-demo-infra
+  namespace: kubernetes-cluster-demo
+spec: {}

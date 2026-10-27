@@ -1,0 +1,30 @@
+# HCP space example for management-cluster/outscale-provider-nodepool-class.draft.yaml.
+# Replace the space identity, provider template, Kubernetes-ready OMI and keypair as needed.
+# The class draft documents the current MSC addonDefinitions execution limitation.
+apiVersion: apiextensions.managedservice.numspot.com/v1alpha2
+kind: ManagedServiceSupplementalAddon
+metadata:
+  name: osc-paris-pools
+  namespace: cloud-kubernetes
+spec:
+  instanceRef:
+    name: 123e4567-e89b-42d3-a456-426614174000
+  classRef:
+    name: outscale-provider-nodepool
+    namespace: cloud-kubernetes
+  parameters:
+    # Must match metadata.name for the class's machine-template references.
+    nodePoolId: osc-paris-pools
+    clusterName: space-123e4567-e89b-42d3-a456-426614174000
+    clusterVersion: v1.34.10
+    # Publish this template separately with /credentials/fromSecret protected.
+    providerTemplateName: osc-paris-addon-v1
+    # Provision this Secret using the native Outscale format in space-hcp-<space-id>.
+    credentialsSecretName: outscale-account-a-eu-west-2
+    # Shared initial replica count for each of small, medium and large.
+    replicas: "1"
+    # Object parameters are JSON strings. VM types are set by the class addons.
+    machineSpec: >-
+      {"node":{"image":{"name":"replace-with-kubernetes-omi"},
+        "vm":{"keypairName":"replace-with-keypair",
+          "rootDisk":{"rootDiskSize":30,"rootDiskType":"standard"}}}}

@@ -1,0 +1,94 @@
+# A new single-cloud Cluster using the shared Outscale CompositeProviderTemplate.
+# Apply source templates and compositeprovider-sample.yaml first. Supply the named KamajiControlPlane,
+# native credentials and worker image/keypair before creating the workers.
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  name: tenant-demo
+  namespace: default
+spec:
+  infrastructureRef:
+    apiGroup: infrastructure.cluster.x-k8s.io
+    kind: CompositeCluster
+    name: tenant-demo
+  controlPlaneRef:
+    apiGroup: controlplane.cluster.x-k8s.io
+    kind: KamajiControlPlane
+    name: tenant-demo-control-plane
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeCluster
+metadata:
+  name: tenant-demo
+  namespace: default
+spec: {}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProvider
+metadata:
+  name: tenant-demo-outscale
+  namespace: default
+spec:
+  clusterRef: {name: tenant-demo}
+  templateRef:
+    name: outscale-account-a-r1
+  # Only cluster-specific values; defaults come from the profile's source templates.
+  infraSpec:
+    network:
+      clusterName: tenant-demo
+      internetService:
+        name: tenant-demo
+      net:
+        ipRange: 10.0.0.0/16
+
+# Workers use native templates. This pool references the bootstrap template
+# generated for the provider named "tenant-demo-outscale": tenant-demo-tenant-demo-outscale.
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OscMachineTemplate
+metadata:
+  name: tenant-demo-workers
+  namespace: default
+spec:
+  template:
+    spec:
+      node:
+        image:
+          name: replace-with-kubernetes-omi
+        vm:
+          clusterName: tenant-demo
+          keypairName: replace-with-keypair
+          rootDisk:
+            rootDiskSize: 30
+            rootDiskType: standard
+          subregionName: eu-west-2a
+          vmType: tinav7.c4r8p2
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: MachineDeployment
+metadata:
+  name: tenant-demo-workers
+  namespace: default
+  labels:
+    cluster.x-k8s.io/cluster-name: tenant-demo
+spec:
+  clusterName: tenant-demo
+  replicas: 3
+  selector: {}
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: tenant-demo
+    spec:
+      clusterName: tenant-demo
+      version: v1.34.10
+      failureDomain: eu-west-2a
+      bootstrap:
+        configRef:
+          apiGroup: bootstrap.cluster.x-k8s.io
+          kind: KubeadmConfigTemplate
+          name: tenant-demo-tenant-demo-outscale
+      infrastructureRef:
+        apiGroup: infrastructure.cluster.x-k8s.io
+        kind: OscMachineTemplate
+        name: tenant-demo-workers

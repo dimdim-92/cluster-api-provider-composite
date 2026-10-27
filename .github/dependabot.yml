@@ -1,0 +1,24 @@
+# Match longue-vue's security-update policy; scheduled version PRs are disabled.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: "fix(deps)"
+  - package-ecosystem: gomod
+    directory: /api
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: "fix(deps)"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 0
+    commit-message:
+      prefix: "chore(deps)"

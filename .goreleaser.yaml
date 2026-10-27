@@ -1,0 +1,43 @@
+version: 2
+project_name: cluster-api-provider-composite
+dist: out/goreleaser
+
+builds:
+  - id: operator
+    main: ./cmd/operator
+    binary: cluster-api-provider-composite
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -mod=readonly
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -X main.Version=v{{ .Version }}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ .Version }}-next"
+
+changelog:
+  disable: true
+
+release:
+  prerelease: auto
+  mode: keep-existing
+  extra_files:
+    - glob: out/release/infrastructure-components.yaml
+    - glob: out/release/metadata.yaml
+    - glob: out/cluster-api-provider-composite-*.tgz

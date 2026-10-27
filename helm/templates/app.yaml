@@ -1,0 +1,119 @@
+{{- if eq (int .Values.metrics.port) (int .Values.healthPort) }}
+{{- fail "metrics.port and healthPort must differ" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "composite.fullname" . | quote }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "composite.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cluster-api-provider-composite
+      app.kubernetes.io/instance: {{ .Release.Name | quote }}
+  template:
+    metadata:
+      labels:
+        {{- include "composite.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "composite.serviceAccountName" . | quote }}
+      terminationGracePeriodSeconds: 30
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: manager
+          image: {{ include "composite.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - {{ printf "--leader-elect=%t" .Values.leaderElection | quote }}
+            - {{ printf "--diagnostics-address=:%v" .Values.metrics.port | quote }}
+            - {{ printf "--insecure-diagnostics=%t" .Values.metrics.insecure | quote }}
+            - {{ printf "--health-addr=:%v" .Values.healthPort | quote }}
+            - {{ printf "--namespace=%s" .Values.watchNamespace | quote }}
+            - {{ printf "--watch-filter=%s" .Values.watchFilter | quote }}
+            {{- if .Values.metrics.existingSecret }}
+            - --metrics-cert-dir=/certs/metrics
+            {{- end }}
+            {{- with .Values.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+            - name: health
+              containerPort: {{ .Values.healthPort }}
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: health
+            initialDelaySeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: health
+            initialDelaySeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          {{- if .Values.metrics.existingSecret }}
+          volumeMounts:
+            - name: metrics-certs
+              mountPath: /certs/metrics
+              readOnly: true
+          {{- end }}
+      {{- if .Values.metrics.existingSecret }}
+      volumes:
+        - name: metrics-certs
+          secret:
+            secretName: {{ .Values.metrics.existingSecret | quote }}
+            defaultMode: 0440
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-metrics" (include "composite.fullname" .) | quote }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "composite.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/name: cluster-api-provider-composite
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+  ports:
+    - name: metrics
+      port: {{ .Values.metrics.port }}
+      targetPort: metrics
+      appProtocol: {{ ternary "http" "https" .Values.metrics.insecure }}

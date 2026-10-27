@@ -1,0 +1,76 @@
+# Shared profiles for the single-cloud and spanning examples.
+# Apply compositeprovider-templates.yaml first. Edit source payloads and references before use:
+#   kubectl apply -f local/compositeprovider-sample.yaml
+# Profiles are cluster-scoped immutable revisions. Credentials remain in native
+# provider Secrets in the consuming namespace; these objects contain references only.
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProviderTemplate
+metadata:
+  name: outscale-account-a-r1
+spec:
+  provider: outscale
+  account: account-a
+  region: eu-west-2
+  credentialsRef:
+    name: outscale-account-a-eu-west-2
+    namePaths: [/credentials/fromSecret]
+  infraClusterKind:
+    apiGroup: infrastructure.cluster.x-k8s.io
+    kind: OscCluster
+  zones: [eu-west-2a]
+  endpointPaths: [spec.controlPlaneEndpoint]
+  infrastructureTemplateRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: OscClusterTemplate
+    namespace: composite-templates
+    name: outscale-account-a-r1
+  bootstrapTemplateRef:
+    apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+    kind: KubeadmConfigTemplate
+    namespace: composite-templates
+    name: outscale-bootstrap-r1
+  overridePolicy:
+    infraSpecPaths:
+      - /network/clusterName
+      - /network/internetService/name
+      - /network/net/ipRange
+    protectedInfraSpecPaths: [/credentials, /network/subregions, /network/disable]
+    bootstrapPaths: [/files, /preKubeadmCommands]
+    protectedBootstrapPaths:
+      - /joinConfiguration/nodeRegistration/kubeletExtraArgs
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProviderTemplate
+metadata:
+  name: openstack-account-a-r1
+spec:
+  provider: openstack
+  account: account-a
+  region: EU-WEST-PAR
+  credentialsRef:
+    name: openstack-account-a-eu-west-par
+    namePaths: [/identityRef/name]
+  infraClusterKind:
+    apiGroup: infrastructure.cluster.x-k8s.io
+    kind: OpenStackCluster
+  endpointPaths: [spec.controlPlaneEndpoint, spec.apiServerFixedIP, spec.apiServerPort]
+  infrastructureTemplateRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: OpenStackClusterTemplate
+    namespace: composite-templates
+    name: openstack-account-a-r1
+  bootstrapTemplateRef:
+    apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+    kind: KubeadmConfigTemplate
+    namespace: composite-templates
+    name: openstack-bootstrap-r1
+  overridePolicy:
+    infraSpecPaths: [/managedSubnets]
+    protectedInfraSpecPaths:
+      - /identityRef
+      - /apiServerLoadBalancer
+      - /disableAPIServerFloatingIP
+      - /disableExternalNetwork
+    bootstrapPaths: [/files, /preKubeadmCommands]
+    protectedBootstrapPaths:
+      - /joinConfiguration/nodeRegistration/kubeletExtraArgs

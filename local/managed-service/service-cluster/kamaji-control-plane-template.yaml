@@ -1,0 +1,27 @@
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha1
+kind: KamajiControlPlaneTemplate
+metadata:
+  name: composite-kamaji-v1
+  namespace: composite-templates
+spec:
+  template:
+    spec:
+      dataStoreName: default
+      # CAPI supplies version and replicas from Cluster.spec.topology.
+      network:
+        serviceType: LoadBalancer
+      addons:
+        coreDNS: {}
+        kubeProxy: {}
+        konnectivity:
+          agent:
+            mode: DaemonSet
+            hostNetwork: true
+            tolerations:
+              - operator: Exists
+          server:
+            port: 8132
+            extraArgs:
+              - --admin-bind-address=0.0.0.0
+      kubelet:
+        preferredAddressTypes: [InternalIP, ExternalIP, Hostname]

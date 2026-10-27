@@ -1,0 +1,97 @@
+# SupplementalAddon rendering definition; reuses Composite's generated bootstrap
+# template and creates only the native MachineTemplate and MachineDeployment.
+apiVersion: apiextensions.managedservice.numspot.com/v1alpha2
+kind: ManagedServiceClass
+metadata:
+  name: composite-openstack-nodepool-v1
+  namespace: cloud-kubernetes
+spec:
+  domain: kubernetes
+  resourceType: nodepool
+  canBeAddonFor:
+    - {name: kubernetes-composite-v1, namespace: cloud-kubernetes}
+    - {name: composite-openstack-provider-v1, namespace: cloud-kubernetes}
+  variables:
+    - name: nodePoolId
+      required: true
+      schema: {type: string, minLength: 1, maxLength: 40, pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'}
+    - name: clusterName
+      required: true
+      schema: {type: string, minLength: 1, maxLength: 57}
+    - name: clusterVersion
+      required: true
+      mutable: true
+      schema: {type: string, pattern: '^v[0-9]+\.[0-9]+\.[0-9]+$'}
+    - name: attachment
+      required: true
+      schema: {type: string, minLength: 1, maxLength: 63, pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'}
+    - name: replicas
+      mutable: true
+      schema: {type: integer, minimum: 0, maximum: 100, default: 1}
+    - name: machineSpec
+      required: true
+      schema:
+        type: object
+        required: [flavor, image, identityRef, ports]
+        properties:
+          flavor: {type: string, minLength: 1}
+          image: {type: object}
+          identityRef: {type: object}
+          ports: {type: array, minItems: 1, items: {type: object}}
+  resource:
+    machineTemplate:
+      apiVersion:
+        group: infrastructure.cluster.x-k8s.io
+        version: v1beta1
+        kind: OpenStackMachineTemplate
+        resource: openstackmachinetemplates
+      manifest:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: OpenStackMachineTemplate
+        metadata:
+          name: osmt
+        spec:
+          template:
+            spec: '${raw(parameters.machineSpec)}'
+    machineDeployment:
+      dependsOn: [machineTemplate]
+      apiVersion:
+        group: cluster.x-k8s.io
+        version: v1beta2
+        kind: MachineDeployment
+        resource: machinedeployments
+      manifest:
+        apiVersion: cluster.x-k8s.io/v1beta2
+        kind: MachineDeployment
+        metadata:
+          name: md
+          labels:
+            cluster.x-k8s.io/cluster-name: '${parameters.clusterName}'
+        spec:
+          clusterName: '${parameters.clusterName}'
+          replicas: '${raw(parameters.replicas)}'
+          selector: {}
+          template:
+            metadata:
+              labels:
+                cluster.x-k8s.io/cluster-name: '${parameters.clusterName}'
+            spec:
+              clusterName: '${parameters.clusterName}'
+              version: '${parameters.clusterVersion}'
+              bootstrap:
+                configRef:
+                  apiGroup: bootstrap.cluster.x-k8s.io
+                  kind: KubeadmConfigTemplate
+                  # Generated per attachment, not the shared profile source.
+                  name: '${parameters.clusterName}-infra-${parameters.attachment}'
+              infrastructureRef:
+                apiGroup: infrastructure.cluster.x-k8s.io
+                kind: OpenStackMachineTemplate
+                name: 'supplemental-${parameters.nodePoolId}-osmt'
+      readyWhen:
+        - >-
+          has(self.status.conditions) && self.status.conditions.exists(c,
+            c.type == 'Available' && c.status == 'True' && c.observedGeneration == self.metadata.generation)
+        - has(self.status.replicas) && self.status.replicas == self.spec.replicas
+        - has(self.status.availableReplicas) && self.status.availableReplicas == self.spec.replicas
+        - has(self.status.upToDateReplicas) && self.status.upToDateReplicas == self.spec.replicas

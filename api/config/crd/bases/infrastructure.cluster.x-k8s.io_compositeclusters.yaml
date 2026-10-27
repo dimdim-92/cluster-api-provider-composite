@@ -1,0 +1,527 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.22.0
+  labels:
+    cluster.x-k8s.io/provider: infrastructure-composite
+    cluster.x-k8s.io/v1beta2: v1beta2
+  name: compositeclusters.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: CompositeCluster
+    listKind: CompositeClusterList
+    plural: compositeclusters
+    shortNames:
+    - cocl
+    singular: compositecluster
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Owning CAPI Cluster
+      jsonPath: .metadata.labels['cluster\.x-k8s\.io/cluster-name']
+      name: Cluster
+      type: string
+    - description: Clouds this cluster spans
+      jsonPath: .status.providerNames
+      name: Providers
+      type: string
+    - description: All children provisioned and endpoint fanned out
+      jsonPath: .status.initialization.provisioned
+      name: Provisioned
+      type: string
+    - description: Control plane endpoint
+      jsonPath: .spec.controlPlaneEndpoint.host
+      name: Endpoint
+      type: string
+    - description: Neutral failure reason
+      jsonPath: .status.reason
+      name: Reason
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta2
+    schema:
+      openAPIV3Schema:
+        description: |-
+          CompositeCluster is the Schema for the compositeclusters API.
+
+          It implements the CAPI InfraCluster contract. Namespaced CompositeProviders
+          select the native infrastructure and bootstrap children; this resource carries
+          their shared endpoint and bootstrap configuration.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec is the desired infrastructure composition.
+            minProperties: 0
+            properties:
+              bootstrap:
+                description: |-
+                  bootstrap is the ONE shared worker bootstrap payload — a
+                  bootstrap.cluster.x-k8s.io/v1beta2 KubeadmConfigTemplate
+                  spec.template.spec (kubeletExtraArgs as a list of {name, value}),
+                  authored upstream: files, preKubeadmCommands, node labels, everything
+                  provider-independent.
+
+                  For each provider it is merged with that provider's bootstrap overlay
+                  (RFC 7386) and minted as a stable KubeadmConfigTemplate named
+                  "<cluster>-<provider>", which that provider's MachineDeployments
+                  reference. Minting happens only after EndpointPropagated: the kubeadm
+                  bootstrap provider renders join commands from the settled endpoint, and
+                  Cluster.spec.controlPlaneEndpoint is copy-once. The minted templates are
+                  updated in place on payload changes and affect new machines only.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              controlPlaneEndpoint:
+                description: |-
+                  controlPlaneEndpoint is part of the CAPI InfraCluster contract.
+
+                  It is written by the Kamaji control plane provider, which patches exactly
+                  ONE object: whichever is named in Cluster.spec.infrastructureRef. A
+                  cluster spanning clouds has several InfraClusters, all of which need the
+                  endpoint, so we fan it out to every child through each provider's
+                  endpointPaths. That fan-out is the load-bearing reason this is a
+                  delegator at all.
+                minProperties: 1
+                properties:
+                  host:
+                    description: host is the hostname on which the API server is serving.
+                    maxLength: 512
+                    minLength: 1
+                    type: string
+                  port:
+                    description: port is the port on which the API server is serving.
+                    format: int32
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                type: object
+            type: object
+          status:
+            description: status reports observed infrastructure state.
+            minProperties: 0
+            properties:
+              conditions:
+                description: conditions describe current reconciliation and infrastructure
+                  health.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                maxItems: 32
+                minItems: 0
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              failureDomains:
+                description: |-
+                  failureDomains contains native provider zone names with provider and region
+                  attributes. Conflicting names are rejected, not renamed or silently merged.
+                items:
+                  description: |-
+                    FailureDomain is a CAPI contract type published at status.failureDomains.
+                    Byte-identical to clusterv1.FailureDomain; see APIEndpoint for why it is
+                    redeclared.
+
+                    A spanning cluster publishes the UNION across its clouds, which is how a
+                    single contract field advertises availability zones from two providers.
+                  properties:
+                    attributes:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        attributes records provider, region and zone, plus account and attachment
+                        for profile-backed entries. These observations do not alter native worker lookup.
+                      minProperties: 0
+                      type: object
+                    controlPlane:
+                      description: |-
+                        controlPlane determines if this failure domain is suitable for control
+                        plane machines. Always false here: control planes are hosted by Kamaji on
+                        the Service Cluster, never on Tenant Cluster infrastructure.
+                      type: boolean
+                    name:
+                      description: name is the provider's own name for the failure
+                        domain, e.g. "eu-west-2a".
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                  required:
+                  - name
+                  type: object
+                maxItems: 100
+                minItems: 0
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              initialization:
+                description: initialization records completion of the initial infrastructure
+                  provisioning.
+                minProperties: 1
+                properties:
+                  provisioned:
+                    description: |-
+                      provisioned latches completion of cluster infrastructure initialization.
+                      Provider attachments report their own initialization independently.
+
+                      Kamaji does not set this for dynamically registered infrastructure kinds
+                      -- it patches the endpoint and leaves readiness alone -- so it is ours.
+                    type: boolean
+                type: object
+              message:
+                description: message explains the aggregate reason without changing
+                  its taxonomy.
+                maxLength: 1024
+                minLength: 0
+                type: string
+              observedGeneration:
+                description: observedGeneration is the most recent CompositeCluster
+                  generation reconciled.
+                format: int64
+                type: integer
+              providerNames:
+                description: |-
+                  providerNames is the comma-joined list of provider names, for the
+                  PROVIDERS printer column: a JSONPath over providers[*].name renders
+                  only its first match in kubectl's table view.
+                maxLength: 512
+                minLength: 0
+                type: string
+              providers:
+                description: |-
+                  providers summarizes current and draining attachments and their native
+                  node pools, keyed by CompositeProvider name. Completed retirements leave
+                  durable binding history, not live provider status entries.
+                items:
+                  description: ProviderStatus summarizes one CompositeProvider attachment
+                    and its native node pools.
+                  properties:
+                    bootstrapTemplateRef:
+                      description: |-
+                        bootstrapTemplateRef is the minted per-provider KubeadmConfigTemplate
+                        ("<cluster>-<provider>") that this provider's MachineDeployments
+                        reference. Set only after EndpointPropagated.
+                      properties:
+                        apiVersion:
+                          description: apiVersion is the observed served group/version,
+                            not durable resource identity.
+                          maxLength: 317
+                          minLength: 1
+                          type: string
+                        kind:
+                          description: kind is the referenced resource kind.
+                          maxLength: 63
+                          minLength: 1
+                          type: string
+                        name:
+                          description: name is the referenced object's name in the
+                            CompositeCluster namespace.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                      required:
+                      - apiVersion
+                      - kind
+                      - name
+                      type: object
+                    childRef:
+                      description: childRef is the generated InfraCluster.
+                      properties:
+                        apiVersion:
+                          description: apiVersion is the observed served group/version,
+                            not durable resource identity.
+                          maxLength: 317
+                          minLength: 1
+                          type: string
+                        kind:
+                          description: kind is the referenced resource kind.
+                          maxLength: 63
+                          minLength: 1
+                          type: string
+                        name:
+                          description: name is the referenced object's name in the
+                            CompositeCluster namespace.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                      required:
+                      - apiVersion
+                      - kind
+                      - name
+                      type: object
+                    conditions:
+                      description: |-
+                        conditions mirror attachment health independently of cluster readiness.
+                        Their observed generations refer to the CompositeProvider, not the cluster.
+                      items:
+                        description: Condition contains details for one aspect of
+                          the current state of this API Resource.
+                        properties:
+                          lastTransitionTime:
+                            description: |-
+                              lastTransitionTime is the last time the condition transitioned from one status to another.
+                              This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                            format: date-time
+                            type: string
+                          message:
+                            description: |-
+                              message is a human readable message indicating details about the transition.
+                              This may be an empty string.
+                            maxLength: 32768
+                            type: string
+                          observedGeneration:
+                            description: |-
+                              observedGeneration represents the .metadata.generation that the condition was set based upon.
+                              For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                              with respect to the current state of the instance.
+                            format: int64
+                            minimum: 0
+                            type: integer
+                          reason:
+                            description: |-
+                              reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                              Producers of specific condition types may define expected values and meanings for this field,
+                              and whether the values are considered a guaranteed API.
+                              The value should be a CamelCase string.
+                              This field may not be empty.
+                            maxLength: 1024
+                            minLength: 1
+                            pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                            type: string
+                          status:
+                            description: status of the condition, one of True, False,
+                              Unknown.
+                            enum:
+                            - "True"
+                            - "False"
+                            - Unknown
+                            type: string
+                          type:
+                            description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                            maxLength: 316
+                            pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                            type: string
+                        required:
+                        - lastTransitionTime
+                        - message
+                        - reason
+                        - status
+                        - type
+                        type: object
+                      maxItems: 32
+                      minItems: 0
+                      type: array
+                      x-kubernetes-list-map-keys:
+                      - type
+                      x-kubernetes-list-type: map
+                    message:
+                      description: |-
+                        message gives bounded diagnostic guidance and child context. Raw provider
+                        and admission prose is withheld because it can contain credentials or
+                        payload values; inspect the referenced child and schema with appropriate access.
+                      maxLength: 1024
+                      minLength: 0
+                      type: string
+                    name:
+                      description: name identifies the CompositeProvider attachment
+                        in this namespace.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                    nodePools:
+                      description: |-
+                        nodePools lists native MachineDeployments referencing this attachment's
+                        generated bootstrap template and the owning CAPI Cluster. These are
+                        observations only: Composite never manages workers or gates Ready on them.
+                        At most 100 references fit in a complete status snapshot; larger or
+                        unreadable inventories retain the last snapshot with Ready=Unknown.
+                      items:
+                        description: |-
+                          ChildReference is a concrete, versioned reference to an observed native
+                          object, including generated children and externally managed node pools.
+
+                          Unlike CAPI's ContractVersionedObjectReference this keeps the apiVersion: we
+                          resolve the child's contract version ourselves from its CRD labels and
+                          recording the resolved version makes the object self-describing when
+                          debugging. See docs/design.md for contract resolution.
+                        properties:
+                          apiVersion:
+                            description: apiVersion is the observed served group/version,
+                              not durable resource identity.
+                            maxLength: 317
+                            minLength: 1
+                            type: string
+                          kind:
+                            description: kind is the referenced resource kind.
+                            maxLength: 63
+                            minLength: 1
+                            type: string
+                          name:
+                            description: name is the referenced object's name in the
+                              CompositeCluster namespace.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                        required:
+                        - apiVersion
+                        - kind
+                        - name
+                        type: object
+                      maxItems: 100
+                      minItems: 0
+                      type: array
+                      x-kubernetes-list-map-keys:
+                      - name
+                      x-kubernetes-list-type: map
+                    outputs:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        outputs is reserved for resolved provider facts. The controller does not
+                        currently populate it; consumers must not depend on it being present.
+                      maxProperties: 32
+                      minProperties: 0
+                      type: object
+                    profile:
+                      description: |-
+                        profile reflects the durable profile pin and resolved regional identity.
+                        It is absent before binding and is not binding authority.
+                      properties:
+                        account:
+                          description: account is the profile's administrative account
+                            identity.
+                          maxLength: 63
+                          minLength: 1
+                          type: string
+                        name:
+                          description: name is the referenced immutable profile revision.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        provider:
+                          description: provider is the logical native provider recorded
+                            by the profile.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                        region:
+                          description: region is the profile's native region identity.
+                          maxLength: 63
+                          minLength: 1
+                          type: string
+                      required:
+                      - account
+                      - name
+                      - provider
+                      - region
+                      type: object
+                    provisioned:
+                      description: provisioned reports the attachment's latched initialization,
+                        independently of ongoing health.
+                      type: boolean
+                    reason:
+                      description: |-
+                        reason is the cloud-neutral taxonomy reason for this provider. It never
+                        carries a provider-specific term.
+                      maxLength: 253
+                      minLength: 0
+                      type: string
+                  required:
+                  - name
+                  type: object
+                maxItems: 8
+                minItems: 0
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
+              reason:
+                description: |-
+                  reason is the worst cloud-neutral reason across providers, empty when
+                  healthy.
+                maxLength: 253
+                minLength: 0
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

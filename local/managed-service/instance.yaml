@@ -1,0 +1,17 @@
+# Apply on the MSC management cluster to start the hosted control plane; then apply providers.yaml on the service cluster.
+# MSC creates kubernetes-cluster-demo on its configured service cluster.
+apiVersion: apiextensions.managedservice.numspot.com/v1alpha2
+kind: ManagedServiceInstance
+metadata:
+  name: demo
+  namespace: cloud-kubernetes
+spec:
+  classRef:
+    name: kubernetes-composite-v1
+    namespace: cloud-kubernetes
+  overlayRefs:
+    - name: composite-demo-v1
+      namespace: cloud-kubernetes
+  overrides:
+    - name: clusterId
+      value: demo

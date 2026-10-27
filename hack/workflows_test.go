@@ -17,6 +17,8 @@ package hack_test
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -27,6 +29,7 @@ import (
 )
 
 type githubStep struct {
+	ID   string            `json:"id"`
 	Name string            `json:"name"`
 	Uses string            `json:"uses"`
 	Run  string            `json:"run"`
@@ -142,6 +145,67 @@ func TestGitHubReleasePublishesOnlyAfterValidationAndImages(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "the binary publisher must pin GoReleaser to the validated event tag")
+}
+
+func TestReleasePleaseRequiresCompleteAppConfiguration(t *testing.T) {
+	workflow := readWorkflow(t, "release-please")
+	assert.Equal(t, map[string]string{"contents": "read"}, workflow.Permissions)
+	steps := workflow.Jobs["release-please"].Steps
+	require.NotEmpty(t, steps)
+	configuration := steps[0]
+	require.Equal(t, "app-config", configuration.ID, "check optional credentials before requesting an App token")
+	assert.Equal(t, "${{ secrets.RELEASE_PLEASE_APP_ID }}", configuration.Env["APP_ID"])
+	assert.Equal(t, "${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}", configuration.Env["APP_PRIVATE_KEY"])
+	require.Len(t, steps, 3)
+	for _, step := range steps[1:] {
+		assert.Equal(t, "steps.app-config.outputs.configured == 'true'", step.If)
+	}
+	assert.Equal(t, "${{ steps.app-token.outputs.token }}", steps[2].With["token"], "do not fall back to a token that suppresses follow-up workflows")
+	assert.Equal(t, "main", steps[2].With["target-branch"], "release the triggering branch, not a different repository default")
+
+	for _, tc := range []struct {
+		name, appID, privateKey, configured string
+		wantError                           bool
+	}{
+		{name: "not-configured", configured: "false"},
+		{name: "configured", appID: "123", privateKey: "test-private-key", configured: "true"},
+		{name: "missing-private-key", appID: "123", wantError: true},
+		{name: "missing-app-id", privateKey: "test-private-key", wantError: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			outputPath := filepath.Join(dir, "output")
+			summaryPath := filepath.Join(dir, "summary")
+			require.NoError(t, os.WriteFile(outputPath, nil, 0o600))
+			require.NoError(t, os.WriteFile(summaryPath, nil, 0o600))
+			t.Setenv("APP_ID", tc.appID)
+			t.Setenv("APP_PRIVATE_KEY", tc.privateKey)
+			t.Setenv("GITHUB_OUTPUT", outputPath)
+			t.Setenv("GITHUB_STEP_SUMMARY", summaryPath)
+			cmd := exec.CommandContext(t.Context(), "bash", "-c", configuration.Run)
+			log, err := cmd.CombinedOutput()
+			if tc.wantError {
+				require.Error(t, err, "%s", log)
+				assert.Contains(t, string(log), "::error::")
+			} else {
+				require.NoError(t, err, "%s", log)
+			}
+			output, err := os.ReadFile(outputPath)
+			require.NoError(t, err)
+			if tc.wantError {
+				assert.Empty(t, output, "partial credentials must not enable release steps")
+			} else {
+				assert.Equal(t, "configured="+tc.configured+"\n", string(output))
+			}
+			summary, err := os.ReadFile(summaryPath)
+			require.NoError(t, err)
+			if tc.configured == "false" {
+				assert.Contains(t, string(log), "::notice::")
+				assert.Contains(t, string(summary), "not configured")
+			}
+			assert.NotContains(t, string(log)+string(output)+string(summary), "test-private-key")
+		})
+	}
 }
 
 func TestReleasePleaseKeepsOneProviderAndChartVersion(t *testing.T) {

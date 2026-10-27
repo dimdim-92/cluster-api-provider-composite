@@ -74,7 +74,15 @@ func testOperatorProviderAddons(t *testing.T, installation *envtest.Environment,
 		return ready != nil && ready.Status == metav1.ConditionTrue && ready.ObservedGeneration == current.Generation
 	}, 10*time.Second, 100*time.Millisecond)
 	current := &infrav1.CompositeCluster{}
-	require.NoError(t, c.Get(t.Context(), client.ObjectKeyFromObject(cc), current))
+	// Provider status precedes the cluster snapshot. A retryable conflict can
+	// leave the cluster Unknown even after the provider has become Ready.
+	require.Eventually(t, func() bool {
+		if c.Get(t.Context(), client.ObjectKeyFromObject(cc), current) != nil {
+			return false
+		}
+		ready := condition(current.Status.Conditions, infrav1.ReadyCondition)
+		return ready != nil && ready.Status == metav1.ConditionTrue && ready.ObservedGeneration == current.Generation
+	}, 10*time.Second, 100*time.Millisecond, "cluster readiness must settle independently of provider readiness")
 	requireCondition(t, current.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
 	testOperatorProviderPoolSummary(t, c, cc, p, cluster.Name)
 }
@@ -122,7 +130,9 @@ func testOperatorProviderPoolSummary(t *testing.T, c client.Client, cc *infrav1.
 			return false
 		}
 		pools := current.Status.Providers[0].NodePools
-		return len(pools) == 1 && pools[0].Name == pool.GetName()
+		ready := condition(current.Status.Conditions, infrav1.ReadyCondition)
+		return len(pools) == 1 && pools[0].Name == pool.GetName() &&
+			ready != nil && ready.Status == metav1.ConditionTrue && ready.ObservedGeneration == current.Generation
 	}, 10*time.Second, 100*time.Millisecond, "worker creation must refresh the summary without waiting for polling")
 	assertProviderPoolNames(t, &current.Status.Providers[0], pool.GetName())
 	requireCondition(t, current.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)

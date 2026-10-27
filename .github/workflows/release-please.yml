@@ -16,10 +16,29 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
+      - name: Check release App configuration
+        id: app-config
+        shell: bash
+        env:
+          APP_ID: ${{ secrets.RELEASE_PLEASE_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$APP_ID" && -z "$APP_PRIVATE_KEY" ]]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release automation is not configured; set RELEASE_PLEASE_APP_ID and RELEASE_PLEASE_APP_PRIVATE_KEY to enable it."
+            echo "Release automation is not configured. No release PR or tag was created. Configure both RELEASE_PLEASE_APP_ID and RELEASE_PLEASE_APP_PRIVATE_KEY Actions secrets to enable it." >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -z "$APP_ID" || -z "$APP_PRIVATE_KEY" ]]; then
+            echo "::error::Release automation requires both RELEASE_PLEASE_APP_ID and RELEASE_PLEASE_APP_PRIVATE_KEY Actions secrets."
+            exit 1
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
       # App-authored release PRs and tags trigger CI/release workflows; events
       # created with the default GITHUB_TOKEN would otherwise be suppressed.
       - name: Generate scoped GitHub App token
         id: app-token
+        if: steps.app-config.outputs.configured == 'true'
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
         with:
           app-id: ${{ secrets.RELEASE_PLEASE_APP_ID }}
@@ -28,8 +47,10 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
       - name: Maintain release PR and create alpha release
+        if: steps.app-config.outputs.configured == 'true'
         uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
         with:
           token: ${{ steps.app-token.outputs.token }}
+          target-branch: main
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json

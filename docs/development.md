@@ -36,7 +36,7 @@ bundle, PostgreSQL service or private chart dependency.
 | [CI](../.github/workflows/verify.yml) | Independent Go, Helm/Kustomize and Docker jobs; source/API/generated checks, vet, build, race/envtest tests, coverage and a restricted local-image smoke test |
 | [Commit Lint](../.github/workflows/commit-lint.yml) | Conventional Commits and PR titles, including the eventual squash subject |
 | [Security](../.github/workflows/security.yml) | Both-module govulncheck/gosec, source hygiene and Trivy filesystem/IaC/image scans; weekly and manually dispatchable as well as PR/main runs |
-| [release-please](../.github/workflows/release-please.yml) | Maintains an alpha release PR from Conventional Commits on main |
+| [release-please](../.github/workflows/release-please.yml) | Maintains an alpha release PR from Conventional Commits on main once GitHub App credentials are configured |
 | [Release](../.github/workflows/release.yml) | Validates a version tag, then publishes matching operator images, binaries, Helm chart and clusterctl assets |
 
 Actions are pinned to immutable SHAs. The shared [tool setup](../.github/actions/setup-tools/action.yml)
@@ -75,8 +75,11 @@ make verify-vulnerabilities
 Use failing regression tests before behavioral fixes. Prefer table-driven Go
 tests and existing helpers. Test ownership/retry/error paths as well as success.
 Envtest covers API admission and reconciliation, and runtime tests execute the
-operator under its shipped RBAC. These tests do not inherit workstation kubeconfigs
-or provision cloud VMs. Real native worker/network/storage integration is separate.
+operator under its shipped RBAC. Runtime checks wait for current-generation Ready
+observations on the provider and CompositeCluster independently; one resource's
+readiness or latched initialization does not establish the other's current health.
+These tests do not inherit workstation kubeconfigs or provision cloud VMs. Real
+native worker/network/storage integration is separate.
 
 Direct root `go test ./...` needs `KUBEBUILDER_ASSETS`; `make test` resolves installed
 assets. `SKIP_ENVTEST=1` is a local-only shortcut, rejected in CI. Run API-module

@@ -105,6 +105,10 @@ repository settings before enabling them:
   private key as `RELEASE_PLEASE_APP_PRIVATE_KEY` in Actions secrets. The scoped App
   token lets release PRs and tags trigger follow-up workflows; the default
   `GITHUB_TOKEN` would suppress those events. Do not reuse a developer's SSH/GPG key.
+  When both secrets are absent, release automation reports a notice and a job summary
+  without creating release PRs or tags. Supplying only one secret is a configuration
+  error and fails the job. Once configured, release PRs explicitly target `main`,
+  independently of the repository's default branch.
 - Allow GitHub Actions and the required pinned actions. Permit the repository's
   `GITHUB_TOKEN` to publish its GHCR image and chart packages; existing packages may
   need to grant this repository Actions access. Publication jobs alone receive

@@ -9,9 +9,9 @@ and generation tools, including controller-gen **v0.22.0**. Both Go modules requ
 Go 1.26.0 or newer and select the pinned local toolchain. Container builds use the
 separate digest-pinned Go **1.27.3-alpine** image in
 [build/operator.Dockerfile](../build/operator.Dockerfile).
-Git and public network access are needed for tools/modules and vulnerability data.
-Docker is required for image builds; kind/kubectl/clusterctl are optional for local
-installation work.
+Git, Bash and jq are needed for the offline release-policy tests; public network
+access is needed for tools/modules and vulnerability data. Docker is required for
+image builds; kind/kubectl/clusterctl are optional for local installation work.
 
 ```sh
 make envtest-download
@@ -27,17 +27,18 @@ and Security workflows rather than hiding test results behind a vulnerability sc
 
 ## GitHub automation
 
-The workflow layout follows Numspot's longue-vue repository, adapted to one
-operator, the separate API module and native provider packaging. There is no UI
-bundle, PostgreSQL service or private chart dependency.
+The CI layout follows Numspot's longue-vue repository, adapted to one operator,
+the separate API module and native provider packaging. Release publication uses
+reusable verification followed by promotion of the same tested artifacts. There
+is no UI bundle, deployment step or private workflow/chart dependency.
 
 | Workflow | Purpose |
 |---|---|
-| [CI](../.github/workflows/verify.yml) | Independent Go, Helm/Kustomize and Docker jobs; source/API/generated checks, vet, build, race/envtest tests, coverage and a restricted local-image smoke test |
+| [CI](../.github/workflows/verify.yml) | Independent Go, Helm/Kustomize and Docker jobs; source/API/generated checks, vet, build, race/envtest tests, coverage and restricted image smoke tests; reusable for releases |
 | [Commit Lint](../.github/workflows/commit-lint.yml) | Conventional Commits and PR titles, including the eventual squash subject |
 | [Security](../.github/workflows/security.yml) | Both-module govulncheck/gosec, source hygiene and Trivy filesystem/IaC/image scans; weekly and manually dispatchable as well as PR/main runs |
 | [release-please](../.github/workflows/release-please.yml) | Maintains an alpha release PR from Conventional Commits on main once GitHub App credentials are configured |
-| [Release](../.github/workflows/release.yml) | Validates a version tag, then publishes matching operator images, binaries, Helm chart and clusterctl assets |
+| [Release](../.github/workflows/release.yml) | On published GitHub Releases, validates immutable tag/commit identity and series, reuses CI/Security gates, then promotes tested images and shared digest-pinned installation assets |
 
 Actions are pinned to immutable SHAs. The shared [tool setup](../.github/actions/setup-tools/action.yml)
 reads [tool pins](../hack/tools.env); Go caching covers both module checksums.
@@ -46,14 +47,24 @@ CI checks generated output in scratch space and never repairs the working source
 which CI uploads even after a test failure. Docker jobs use the existing operator
 Dockerfile, not longue-vue's frontend/database build.
 
+The release caller supplies an exact `release-version`. Reusable CI builds and
+smoke-tests amd64/arm64 images with that version, then retains image archives,
+commit/version records and image IDs. Reusable Security validates and scans those
+same images. Publication validates their identities again and assembles the
+multiarch index without a rebuild. One final digest-pinned chart archive feeds
+both GitHub and OCI; `make helm-package VERSION=... IMAGE=...` stages image defaults
+in scratch, without modifying source values or CRDs. Offline tests in
+[hack](../hack/) cover event/ref gates, artifact identity and packaging behavior.
+
 Security scan findings are not suppressed: govulncheck and fixable high/critical
 image findings fail their jobs. Gosec and filesystem/IaC findings are advisory
 reports, matching the upstream workflow. SARIF is always retained as workflow
 artifacts when available. The [SARIF normalizer](../hack/normalize-sarif/) rebases
 API-module source locations to repository-relative `api/...` paths, preserving
 report fields and exact JSON numbers so Code Scanning links/fingerprints work. Code Scanning upload is opt-in through
-`ENABLE_CODE_SCANNING=true`, requires repository support, and runs only for trusted
-non-PR events. No release App credentials are exposed to pull requests. Secret
+`ENABLE_CODE_SCANNING=true`, requires repository support, and runs only for standalone
+trusted non-PR events. Reusable release scans retain per-architecture reports without
+Code Scanning uploads. No release App credentials are exposed to pull requests. Secret
 scanning uses the existing pinned gitleaks CLI and needs no action license.
 
 See [release setup](operations.md#automated-releases) before enabling publishing.

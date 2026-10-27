@@ -7,6 +7,12 @@ on:
   schedule:
     - cron: "23 4 * * 1"
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      release-version:
+        description: Scan the same-run CI image archives instead of rebuilding them.
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -35,6 +41,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Set up pinned tools
         id: tools
@@ -64,6 +71,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Set up pinned tools
         id: tools
@@ -93,6 +101,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Set up pinned tools
         uses: ./.github/actions/setup-tools
@@ -108,6 +117,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Set up pinned tools
         id: tools
@@ -146,33 +156,53 @@ jobs:
           if-no-files-found: ignore
 
   trivy-image:
-    name: trivy (operator image)
+    name: trivy (operator image ${{ matrix.arch }})
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(inputs.release-version != '' && '["amd64","arm64"]' || '["amd64"]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Set up pinned tools
         id: tools
         uses: ./.github/actions/setup-tools
-      - name: Set up Buildx
+      - name: Download the exact tested release image
+        if: inputs.release-version != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: operator-${{ github.sha }}-${{ matrix.arch }}
+          path: ${{ runner.temp }}/operator-image
+      - name: Validate and load the tested image without rebuilding
+        if: inputs.release-version != ''
+        shell: bash
+        env:
+          VERSION: ${{ inputs.release-version }}
+          ARCH: ${{ matrix.arch }}
+        run: bash hack/release-images.sh verify "$RUNNER_TEMP/operator-image" "$ARCH"
+      - name: Set up Buildx for standalone security runs
+        if: inputs.release-version == ''
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
         with:
           buildkitd-config-inline: |
             [registry."docker.io"]
               mirrors = ["mirror.gcr.io"]
-      - name: Build image (local, no push)
+      - name: Build image for standalone security runs (local, no push)
+        if: inputs.release-version == ''
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           file: build/operator.Dockerfile
-          platforms: linux/amd64
+          platforms: linux/${{ matrix.arch }}
           push: false
           load: true
-          tags: composite:scan
-          cache-from: type=gha,scope=composite-operator
+          tags: composite-ci:${{ github.sha }}-${{ matrix.arch }}
+          cache-from: type=gha,scope=composite-operator-${{ matrix.arch }}
           build-args: |
             version=ci-${{ github.sha }}
             revision=${{ github.sha }}
@@ -180,7 +210,7 @@ jobs:
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           version: ${{ steps.tools.outputs.trivy }}
-          image-ref: composite:scan
+          image-ref: composite-ci:${{ github.sha }}-${{ matrix.arch }}
           format: sarif
           output: trivy-image.sarif
           severity: HIGH,CRITICAL
@@ -191,7 +221,7 @@ jobs:
         if: always() && hashFiles('trivy-image.sarif') != ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: trivy-image
+          name: ${{ inputs.release-version != '' && format('trivy-image-{0}', matrix.arch) || 'trivy-image' }}
           path: trivy-image.sarif
 
   code-scanning:
@@ -201,7 +231,8 @@ jobs:
     # explicitly enabled upload job can write to Code Scanning.
     if: >-
       always() && vars.ENABLE_CODE_SCANNING == 'true' &&
-      github.event_name != 'pull_request' && github.actor != 'release-please[bot]'
+      github.event_name != 'pull_request' && github.actor != 'release-please[bot]' &&
+      inputs.release-version == ''
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -231,6 +262,7 @@ jobs:
       - name: Checkout trusted source
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Download scan report from this run
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4

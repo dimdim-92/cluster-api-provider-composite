@@ -1,8 +1,9 @@
 name: Release
 
 on:
-  push:
-    tags: ["v*"]
+  # published includes alpha prereleases; a tag push alone never publishes.
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -20,83 +21,127 @@ env:
 
 jobs:
   validate:
-    name: Validate release version and artifacts
+    name: Validate release identity and artifact inputs
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     outputs:
       version: ${{ steps.release.outputs.version }}
       image: ${{ steps.release.outputs.image }}
     steps:
-      - name: Checkout tagged source and main history
+      - name: Checkout exact release commit and main history
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Require a published, unchanged tag on main before repository tools
+        id: guard
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          RELEASE_ACTION: ${{ github.event.action }}
+          RELEASE_DRAFT: ${{ github.event.release.draft }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = release
+          test "$RELEASE_ACTION" = published
+          test "$RELEASE_DRAFT" = false
+          test "$GITHUB_REF" = "refs/tags/$TAG"
+          git check-ref-format "refs/tags/$TAG"
+          test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
       - name: Set up pinned tools
         id: tools
         uses: ./.github/actions/setup-tools
         with:
           helm: "true"
-      - name: Validate tag, main ancestry and CAPI release series
+      - name: Validate SemVer, prerelease policy and CAPI release series
         id: release
         shell: bash
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           set -euo pipefail
-          git merge-base --is-ancestor HEAD refs/remotes/origin/main
-          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          image="ghcr.io/$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
           VERSION="$TAG" IMAGE="$image:$TAG" sh hack/verify-version.sh
+          case "$TAG" in
+            *-*) test "$RELEASE_PRERELEASE" = true ;;
+            *) test "$RELEASE_PRERELEASE" = false ;;
+          esac
           {
             echo "version=$TAG"
             echo "image=$image"
           } >> "$GITHUB_OUTPUT"
-      - name: Verify generated outputs, API isolation and installation renders
-        run: make verify-generated verify-crd-labels verify-api-deps verify-packaging
-      - name: Build and check embedded version before publishing
+      - name: Preflight release manifests, packaged chart and embedded version without publishing
         shell: bash
         env:
           VERSION: ${{ steps.release.outputs.version }}
-          IMAGE: ${{ steps.release.outputs.image }}:${{ steps.release.outputs.version }}
+          IMAGE: ${{ steps.release.outputs.image }}@sha256:0000000000000000000000000000000000000000000000000000000000000000
         run: |
           set -euo pipefail
-          make build
+          make build release-manifests helm-package
           test "$(bin/manager --version)" = "$VERSION"
-      - name: Validate GoReleaser configuration
+          helm template composite "out/cluster-api-provider-composite-${VERSION#v}.tgz" --include-crds >/dev/null
+      - name: Preflight all binary architectures without publishing
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
         with:
           version: ${{ steps.tools.outputs.goreleaser }}
-          args: check
+          args: build --clean
+        env:
+          GORELEASER_CURRENT_TAG: ${{ steps.release.outputs.version }}
+
+  verify:
+    name: Verify the release commit and build tested images
+    needs: validate
+    uses: ./.github/workflows/verify.yml
+    with:
+      release-version: ${{ needs.validate.outputs.version }}
+
+  security:
+    name: Scan the release commit and tested images
+    needs: [validate, verify]
+    uses: ./.github/workflows/security.yml
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    with:
+      release-version: ${{ needs.validate.outputs.version }}
 
   images:
-    name: Build and push operator image
-    needs: validate
+    name: Publish the exact tested operator images
+    needs: [validate, verify, security]
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 20
+    environment: release
     permissions:
       contents: read
       packages: write
     outputs:
-      digest: ${{ steps.build.outputs.digest }}
+      digest: ${{ steps.publish.outputs.digest }}
     steps:
-      - name: Checkout
+      - name: Checkout exact verified source
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
-      - name: Set up Buildx
+      - name: Download both tested and scanned image archives from this run
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: operator-${{ github.sha }}-*
+          path: ${{ runner.temp }}/operator-images
+      - name: Validate both images before registry credentials
+        shell: bash
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          for arch in amd64 arm64; do
+            bash hack/release-images.sh verify "$RUNNER_TEMP/operator-images/operator-$GITHUB_SHA-$arch" "$arch"
+          done
+      - name: Set up Buildx for manifest assembly only
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
-        with:
-          buildkitd-config-inline: |
-            [registry."docker.io"]
-              mirrors = ["mirror.gcr.io"]
-      - name: Log in to GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Image tags and labels
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
@@ -106,44 +151,40 @@ jobs:
           tags: |
             type=raw,value=${{ needs.validate.outputs.version }},priority=1000
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ !contains(github.ref_name, '-') }}
-            type=semver,pattern={{major}},enable=${{ !contains(github.ref_name, '-') && !startsWith(github.ref_name, 'v0.') }}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
-      - name: Build and push both Linux architectures
-        id: build
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+            type=semver,pattern={{major}}.{{minor}},enable=${{ !contains(needs.validate.outputs.version, '-') }}
+            type=semver,pattern={{major}},enable=${{ !contains(needs.validate.outputs.version, '-') && !startsWith(needs.validate.outputs.version, 'v0.') }}
+            type=raw,value=latest,enable=${{ !contains(needs.validate.outputs.version, '-') }}
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
-          context: .
-          file: build/operator.Dockerfile
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=composite-operator
-          cache-to: type=gha,scope=composite-operator,mode=max
-          build-args: |
-            version=${{ needs.validate.outputs.version }}
-            revision=${{ github.sha }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push unchanged images and assemble one multiarch index
+        id: publish
+        shell: bash
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          IMAGE: ${{ needs.validate.outputs.image }}
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: bash hack/release-images.sh publish "$RUNNER_TEMP/operator-images"
 
-  artifacts:
-    name: Publish binaries and clusterctl assets
+  package:
+    name: Package digest-pinned installation assets once
     needs: [validate, images]
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    permissions:
-      contents: write
+    timeout-minutes: 15
     steps:
-      - name: Checkout full release history
+      - name: Checkout exact verified source
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
-          fetch-depth: 0
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Set up pinned tools
-        id: tools
         uses: ./.github/actions/setup-tools
         with:
           helm: "true"
-      - name: Prepare digest-pinned provider manifests and versioned chart
+      - name: Prepare provider manifests and the shared chart archive
         shell: bash
         env:
           VERSION: ${{ needs.validate.outputs.version }}
@@ -154,8 +195,42 @@ jobs:
           mkdir -p out/release
           cp "out/repository/infrastructure-composite/$VERSION/infrastructure-components.yaml" out/release/
           cp "out/repository/infrastructure-composite/$VERSION/metadata.yaml" out/release/
-          # out/clusterctl.yaml points at a workstation path, so never publish it.
-      - name: Publish operator binaries, checksums, chart and clusterctl assets
+          # out/clusterctl.yaml contains a workstation path and is never uploaded.
+      - name: Retain the exact assets for both publishers
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-package-${{ github.sha }}
+          path: |
+            out/release/infrastructure-components.yaml
+            out/release/metadata.yaml
+            out/cluster-api-provider-composite-*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  artifacts:
+    name: Publish binaries and clusterctl assets
+    needs: [validate, package]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout exact release commit and full history
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up pinned tools
+        id: tools
+        uses: ./.github/actions/setup-tools
+      - name: Download the shared installation assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-package-${{ github.sha }}
+          path: out
+      - name: Publish binaries, checksums and the unchanged installation assets
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
         with:
           version: ${{ steps.tools.outputs.goreleaser }}
@@ -165,32 +240,37 @@ jobs:
           GORELEASER_CURRENT_TAG: ${{ needs.validate.outputs.version }}
 
   chart:
-    name: Publish Helm chart to GHCR
-    needs: [validate, images]
+    name: Publish the same Helm archive to GHCR
+    needs: [validate, package]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    environment: release
     permissions:
       contents: read
       packages: write
     steps:
-      - name: Checkout
+      - name: Checkout exact verified source
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Set up pinned tools
+      - name: Set up pinned Helm
         uses: ./.github/actions/setup-tools
         with:
           helm: "true"
-      - name: Package and publish the matching chart
+      - name: Download the shared installation assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-package-${{ github.sha }}
+          path: out
+      - name: Push the already packaged chart without rebuilding
         shell: bash
         env:
           VERSION: ${{ needs.validate.outputs.version }}
-          IMAGE: ${{ needs.validate.outputs.image }}:${{ needs.validate.outputs.version }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
         run: |
           set -euo pipefail
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           printf '%s' "$GHCR_TOKEN" | helm registry login ghcr.io -u "$GHCR_USER" --password-stdin
-          make helm-package
           helm push "out/cluster-api-provider-composite-${VERSION#v}.tgz" "oci://ghcr.io/$owner/charts"

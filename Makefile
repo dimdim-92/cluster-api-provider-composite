@@ -136,9 +136,7 @@ release-manifests:
 	sh hack/release-manifests.sh
 
 helm-package:
-	sh hack/verify-version.sh
-	mkdir -p out
-	$(HELM) package helm --destination out --version "$${VERSION#v}" --app-version "$$VERSION"
+	sh hack/helm-package.sh
 
 verify-packaging:
 	$(HELM) lint helm

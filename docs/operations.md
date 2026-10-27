@@ -57,8 +57,11 @@ and controller/RBAC requirements.
 
 See [chart values](../helm/README.md). Set `image.repository` and `image.tag` to the
 published image in your values file, or use `image.digest` to pin the exact image.
-For a private registry, also set `imagePullSecrets` to an existing Secret in
-`composite-system`. From the repository root:
+Charts packaged by the release workflow default to the released image's immutable
+digest. To intentionally switch such a chart to a tag, clear `image.digest` as well as
+setting the repository/tag; the digest takes precedence. For a private registry,
+also set `imagePullSecrets` to an existing Secret in `composite-system`. From the
+repository root:
 
 ```sh
 KUBECONFIG=/path/to/management.yaml
@@ -95,16 +98,18 @@ Provider templates declare native GroupKinds; no deployment mapping is needed.
 
 ## Automated releases
 
-The [release workflows](../.github/workflows/release.yml) follow longue-vue's
-release-please/GHCR/GoReleaser model. Composite has one coupled provider/chart
-version rather than independent application and chart tags. Configure the following
-repository settings before enabling them:
+The [release workflow](../.github/workflows/release.yml) uses a GitHub Release
+publication event followed by verification and promotion of tested artifacts.
+Release-please still manages versions and changelogs; Composite has one coupled
+provider/chart version rather than independent application and chart tags. The
+pipeline is self-contained and has no private workflow dependency. Configure the
+following repository settings before enabling publication:
 
 - Install a GitHub App on this repository with **Contents: read/write** and
   **Pull requests: read/write**. Store its ID as `RELEASE_PLEASE_APP_ID` and its PEM
   private key as `RELEASE_PLEASE_APP_PRIVATE_KEY` in Actions secrets. The scoped App
-  token lets release PRs and tags trigger follow-up workflows; the default
-  `GITHUB_TOKEN` would suppress those events. Do not reuse a developer's SSH/GPG key.
+  token lets release PRs and release publication trigger follow-up workflows; the
+  default `GITHUB_TOKEN` would suppress those events. Do not reuse a developer's SSH/GPG key.
   When both secrets are absent, release automation reports a notice and a job summary
   without creating release PRs or tags. Supplying only one secret is a configuration
   error and fails the job. Once configured, release PRs explicitly target `main`,
@@ -113,9 +118,13 @@ repository settings before enabling them:
   `GITHUB_TOKEN` to publish its GHCR image and chart packages; existing packages may
   need to grant this repository Actions access. Publication jobs alone receive
   package/content write permissions.
-- Require the new CI, commit-lint and applicable Security checks before merging.
-  Protect `main` and release tags. Only tags whose commits are on main pass the
-  release guard; unreviewed branch tags do not publish.
+- Require CI, commit-lint and applicable Security checks before merging. Protect
+  `main` and `v*` tags, restricting tag creation, mutation and deletion to reviewed
+  release automation. Configure the `release` environment used by all publication
+  jobs with required reviewers and appropriate tag rules before enabling it.
+  Ancestry checks alone are not a trust boundary: workflows and local actions come
+  from the tagged commit, and someone able to replace that workflow could replace
+  its guard. These repository/environment protections must be configured separately.
 - Optionally enable Code Scanning and set the Actions repository variable
   `ENABLE_CODE_SCANNING` to `true`. Without it, SARIF reports remain downloadable
   workflow artifacts, including for PRs/forks. Dependabot configuration covers both
@@ -134,21 +143,40 @@ Review a release PR and verify the declared major/minor CAPI series in
 review; version automation does not silently claim support. A tag outside the
 listed series fails validation before image/chart publication. Merge the release
 PR only after the required checks pass. Release-please creates a `vX.Y.Z[-alpha.N]`
-tag and release; the tag workflow then publishes:
+tag and GitHub Release. Only the release's `published` event starts publication;
+a tag push alone does not. This includes alpha prereleases, unlike stable-only
+application deployment pipelines. The release's prerelease flag must match its
+SemVer suffix. Changing that flag later does not republish artifacts.
+
+The read-only validation job checks the event/tag identity and main ancestry before
+running repository tools, validates the CAPI series, and preflights the installation
+packages and all binary architectures without publishing. Its placeholder image
+digest tests packaging only, not registry availability. Reusable CI and Security
+then run on the exact event commit, including both-module lint/race/envtest and
+vulnerability checks. CI builds release-version Linux amd64/arm64 images once and
+smoke-tests each; Security scans those same archives rather than rebuilding them.
+Only after these gates pass can the protected publication jobs publish:
 
 - `ghcr.io/<owner>/cluster-api-provider-composite:<tag>` for Linux amd64/arm64,
   with and without the leading `v`. Prereleases do not overwrite `latest` or stable
   major/minor aliases.
 - Linux/macOS amd64/arm64 binary archives and checksums through GoReleaser.
-- The matching chart archive as a GitHub release asset and as
+- One matching chart archive as both a GitHub release asset and
   `oci://ghcr.io/<owner>/charts/cluster-api-provider-composite` (chart versions omit `v`).
-- `infrastructure-components.yaml` pinned to the published image digest and the
-  matching `metadata.yaml` as root release assets for clusterctl. The generated
-  local `out/clusterctl.yaml` contains an absolute path and is never published.
+  Both publishers download the same packaged archive; neither repackages it.
+- `infrastructure-components.yaml` and the chart's default image pinned to the
+  published multiarch index digest, plus matching `metadata.yaml` for clusterctl.
+  Final packaging stages a scratch chart with the actual image repository/digest;
+  it never rewrites source values. The generated local `out/clusterctl.yaml`
+  contains an absolute path and is never published.
 
-Image publication must succeed before the chart and release artifacts publish.
-These are separate remote operations, not an atomic transaction; inspect every
-job before advertising a release and investigate partial failures before retrying.
+Before registry login, the image publisher checks both archives' commit, version,
+image ID, platform and OCI source/revision/version labels. It pushes those unchanged
+images and assembles the multiarch index without rebuilding. Image publication must
+succeed before final installation packaging and both chart/release-asset publishers.
+These are separate remote operations, not an atomic transaction; the GitHub Release
+already exists at the start. Inspect every job before advertising a release and
+investigate existing digests/assets after partial failure before retrying.
 No workflow deploys or upgrades a Kubernetes cluster. Existing vulnerability
 findings still require remediation; workflow reuse does not waive Security checks.
 

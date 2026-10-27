@@ -105,10 +105,12 @@ boundaries and immutable action/tool pins.
 
 [Release-please](../../../.github/workflows/release-please.yml) maintains an alpha
 release PR using a scoped GitHub App token. The separate
-[tag workflow](../../../.github/workflows/release.yml) validates main ancestry and
-CAPI release-series support before publishing the matching image, chart, binaries
-and clusterctl assets. Only trusted release automation and the opt-in Code Scanning
-upload job receive write credentials; PR checks remain read-only. No workflow
+[release-event workflow](../../../.github/workflows/release.yml) validates the
+release commit, main ancestry and CAPI release-series support, reuses CI/Security,
+and promotes tested images plus one shared digest-pinned installation package.
+It publishes matching images, chart, binaries and clusterctl assets. Only trusted
+release automation and the opt-in Code Scanning upload job receive write
+credentials; PR checks remain read-only. No workflow
 deploys a cluster. [Operations](../../operations.md#automated-releases) records
 required secrets, repository settings and partial-publication caveats.
 

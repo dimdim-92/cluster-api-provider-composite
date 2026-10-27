@@ -224,9 +224,13 @@ CompositeProvider and CompositeProviderTemplate advertise only provider identity
 are shared by Helm and clusterctl. The [GitHub automation](development.md#github-automation)
 validates both Go modules and generated outputs without repairing working source.
 One provider release version ties together the operator image/binaries, Helm chart
-and clusterctl assets; the [tag workflow](../.github/workflows/release.yml) checks
-main ancestry and declared CAPI release-series support before publication. These
-pipelines do not deploy clusters or change controller/runtime semantics.
+and clusterctl assets; the [release-event workflow](../.github/workflows/release.yml)
+checks tag/commit identity, main ancestry and declared CAPI release-series support,
+then requires reusable CI/Security gates before publication. Tested images are
+promoted without rebuilding; both installation formats pin the resulting multiarch
+digest and both chart publishers reuse one archive. Repository tag/environment
+protections remain required. These pipelines do not deploy clusters or change
+controller/runtime semantics.
 
 `CompositeCluster`, `CompositeProvider` and `CompositeProviderTemplate` expose status subresources;
 `CompositeClusterTemplate` does not. Profile status reports `ConfigurationValid`

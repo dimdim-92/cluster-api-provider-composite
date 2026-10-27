@@ -2,4 +2,4 @@
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$root"
-go run ./hack/check-release
+"${GO:-go}" run ./hack/check-release

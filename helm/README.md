@@ -33,6 +33,7 @@ adapt this `composite-values.yaml` to your registry and release:
 image:
   repository: registry.example.com/team/cluster-api-provider-composite
   tag: v0.1.0-alpha.1
+  digest: "" # Clear a packaged release's digest when intentionally selecting a tag.
 # For private images, provision this pull Secret in the release namespace:
 # imagePullSecrets:
 #   - name: registry-pull
@@ -72,8 +73,11 @@ the provider's version, not a separate chart-only tag. After the relevant releas
 jobs succeed, the OCI reference is
 `oci://ghcr.io/numspot/charts/cluster-api-provider-composite`, with the leading `v`
 removed from the chart version. A matching chart archive is attached to the GitHub
-release. Release-please keeps chart/appVersion and the provider candidate in sync.
-The alpha manifest is only a starting version; it does not mean any package exists.
+release; both destinations receive the same archive. Its image defaults pin the
+actual published repository and multiarch digest. Packaging stages these defaults
+in scratch without changing source values or CRDs. Release-please keeps
+chart/appVersion and the provider candidate in sync. The alpha manifest is only a
+starting version; it does not mean any package exists.
 
 See [release setup and artifacts](../docs/operations.md#automated-releases) for
 repository permissions, package visibility and matching-image rules. Helm still

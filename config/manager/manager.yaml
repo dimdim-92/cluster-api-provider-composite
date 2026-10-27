@@ -30,8 +30,10 @@ spec:
             - --diagnostics-address=:5555
             - --health-addr=:2112
           env:
+            # Keep the unfiltered default concrete: clusterctl treats an empty
+            # substitution default as a required variable when it is unset.
             - name: WATCH_FILTER
-              value: "${COMPOSITE_WATCH_FILTER:=}"
+              value: ""
           ports:
             - name: metrics
               containerPort: 5555

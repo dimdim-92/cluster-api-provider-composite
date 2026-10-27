@@ -103,12 +103,12 @@ verification, race/envtest coverage and the local image smoke test. Separate
 [Security scans](../../../.github/workflows/security.yml) retain read-only PR trust
 boundaries and immutable action/tool pins.
 
-[Release-please](../../../.github/workflows/release-please.yml) maintains an alpha
-release PR using a scoped GitHub App token. The separate
-[release-event workflow](../../../.github/workflows/release.yml) validates the
-release commit, main ancestry and CAPI release-series support, reuses CI/Security,
-and promotes tested images plus one shared digest-pinned installation package.
-It publishes matching images, chart, binaries and clusterctl assets. Only trusted
+[Release-please](../../../.github/workflows/release-please.yml) maintains stable
+release PRs using a scoped GitHub App token. The separate
+[draft-first workflow](../../../.github/workflows/release.yml) validates the
+annotated tag/source, main ancestry and CAPI release-series support, reuses
+CI/Security, and stages matching images, chart, binaries and clusterctl assets.
+The reviewed draft is published only after all uploads, with immutability verified. Only trusted
 release automation and the opt-in Code Scanning upload job receive write
 credentials; PR checks remain read-only. No workflow
 deploys a cluster. [Operations](../../operations.md#automated-releases) records

@@ -84,10 +84,27 @@ GitHub automation follows the longue-vue CI/security/release workflow layout.
 See [CI and checks](docs/development.md#github-automation) and
 [release setup](docs/operations.md#automated-releases) for App secrets, required
 checks, GHCR permissions and the coupled image/chart/clusterctl release version.
-Publication happens only through validated version tags, not ordinary PR checks.
+Prepare a reviewed draft, then push its annotated version tag to start the gated
+pipeline. Assets stay in the draft until final publication verifies immutability;
+ordinary PR checks never publish.
 
-From the repository root, choose a registry/repository you can push to and the
-management nodes' architecture. This example builds a commit-tagged `linux/amd64`
+For CAPI-managed installation after a successful release, use the checked-in
+[clusterctl provider config](clusterctl.yaml):
+
+```sh
+KUBECONFIG=/path/to/management.yaml
+clusterctl init --infrastructure composite:v0.1.0 \
+  --config ./clusterctl.yaml --kubeconfig "$KUBECONFIG"
+```
+
+This installs the Composite controller/CRDs and records clusterctl provider
+inventory; it does not create native workers or configure cloud credentials.
+Composite is currently a custom provider, not an upstream built-in: keep `--config`
+and follow the [clusterctl prerequisites and local preview](docs/operations.md#clusterctl).
+Do not also install the same controller with Helm.
+
+For a manually built image, from the repository root choose a registry/repository
+you can push to and the management nodes' architecture. This example builds a commit-tagged `linux/amd64`
 image; use `linux/arm64` for ARM nodes.
 
 ```sh

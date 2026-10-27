@@ -7,8 +7,13 @@ Do not publish vulnerabilities in issues or PRs. Include affected versions,
 reproduction steps and impact, without credentials or unnecessary customer data.
 Coordinate disclosure timing with the maintainers.
 
-This development starting point has no released-support matrix or guaranteed
-security response schedule. Those commitments must be established for a release.
+## Release support
+
+`v0.1.0` is the initial experimental pre-1.0 release. There is no guaranteed
+maintenance window, security-response schedule or production-support commitment.
+Security fixes, when available, are published as new versions; existing release
+tags are not moved. Backports to development snapshots or older unreleased
+schemas are not promised. Include the exact affected tag or commit in reports.
 
 ## Trust boundaries
 

@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-14
 
-**Status:** Implemented starting point; pre-release
+**Status:** Implemented; experimental pre-1.0 provider
 
 ## Why this project exists
 

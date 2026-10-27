@@ -1,0 +1,7 @@
+# Register Composite in addition to clusterctl's built-in provider catalog.
+# This is a clusterctl repository URL, not a direct GitHub download URL.
+# A version becomes installable only after its release assets are published.
+providers:
+  - name: composite
+    type: InfrastructureProvider
+    url: https://github.com/numspot/cluster-api-provider-composite/releases/latest/infrastructure-components.yaml

@@ -82,42 +82,87 @@ release namespace. The metrics Service is `composite-metrics`.
 
 ### clusterctl
 
-Set `VERSION` and `IMAGE` to the version and image published through the
-[build workflow](development.md#build-and-publish-an-image), then generate a
-custom local provider repository and registration file:
+Use the checked-in [provider configuration](../clusterctl.yaml), which adds
+`composite` as an `InfrastructureProvider` without replacing clusterctl's built-in
+providers. Its GitHub URL is a version-aware repository URL, not a direct download
+link. The matching release must contain both `infrastructure-components.yaml` and
+`metadata.yaml`; source versions and draft releases are not installable releases.
+
+After the requested version is successfully published, from the repository root:
+
+```sh
+KUBECONFIG=/path/to/management.yaml
+VERSION=v0.1.0
+clusterctl config repositories --config ./clusterctl.yaml
+clusterctl generate provider --infrastructure "composite:$VERSION" \
+  --config ./clusterctl.yaml --target-namespace composite-system
+clusterctl init --infrastructure "composite:$VERSION" \
+  --config ./clusterctl.yaml --kubeconfig "$KUBECONFIG"
+kubectl --kubeconfig "$KUBECONFIG" get providers.clusterctl.cluster.x-k8s.io -A
+kubectl --kubeconfig "$KUBECONFIG" -n composite-system rollout status \
+  deployment/composite-controller-manager --timeout=5m
+```
+
+On a first management-cluster initialization, clusterctl also installs its default
+core, bootstrap and control-plane providers. For a hosted control plane, select
+the intended providers explicitly; `--control-plane -` skips the default kubeadm
+control-plane provider, not your separately installed hosted control plane. Native
+infrastructure providers and their credentials remain separate prerequisites.
+`--target-namespace` relocates provider resources and their ServiceAccount binding
+subjects; it is not the operator's consumer watch scope. Do not install a second
+Composite instance to change namespace or switch installers.
+
+The inventory record is `infrastructure-composite` in the installation namespace,
+with provider name `composite` and type `InfrastructureProvider`. This clusterctl
+`Provider` is not a namespaced `CompositeProvider` attachment. The shipped manager
+has a concrete empty `WATCH_FILTER`: installation needs no cloud account or
+watch-filter substitution variable. For scoped startup, customize `WATCH_FILTER`
+in a source Kustomize overlay or a [clusterctl component override](https://cluster-api.sigs.k8s.io/clusterctl/configuration#overrides-layer)
+before installing; runtime filtering/pause semantics are unchanged.
+
+Before a public release, validate/install from a local repository using an image
+that actually exists in your registry or management nodes:
 
 ```sh
 make release-manifests VERSION="$VERSION" IMAGE="$IMAGE"
+clusterctl generate provider --infrastructure "composite:$VERSION" --config out/clusterctl.yaml
 clusterctl init --infrastructure "composite:$VERSION" \
   --config out/clusterctl.yaml --kubeconfig "$KUBECONFIG"
 ```
 
-Raw [manager configuration](../config/manager/manager.yaml) contains
-`${COMPOSITE_*}` placeholders; clusterctl must substitute them before application.
-Provider templates declare native GroupKinds; no deployment mapping is needed.
+The generated local config contains an absolute workstation path and is not a
+portable release asset. To use an existing clusterctl config, merge the provider
+entry from the checked-in file rather than replacing other settings. Composite is
+not yet registered in upstream clusterctl's built-in catalog: `--config` is required
+for discovery. A separate upstream registration would require review and the
+current organization-prefixed naming convention; it is not implied by this custom
+configuration. Provider templates still declare native GroupKinds; no cloud
+translation layer or worker controller is installed.
 
 ## Automated releases
 
-The [release workflow](../.github/workflows/release.yml) uses a GitHub Release
-publication event followed by verification and promotion of tested artifacts.
-Release-please still manages versions and changelogs; Composite has one coupled
-provider/chart version rather than independent application and chart tags. The
-pipeline is self-contained and has no private workflow dependency. Configure the
-following repository settings before enabling publication:
+The [release workflow](../.github/workflows/release.yml) stages artifacts in a
+reviewed GitHub draft, then publishes only after every stage succeeds. It starts
+from an annotated `v*` tag push; recovery dispatches must also use that tag ref,
+not a branch. Publication is last so GitHub can freeze the completed release's
+assets and tag. Composite has one coupled provider/chart version and no private
+workflow dependency. Configure these settings before publication:
 
-- Install a GitHub App on this repository with **Contents: read/write** and
+- For automated release PRs, install a GitHub App with **Contents: read/write** and
   **Pull requests: read/write**. Store its ID as `RELEASE_PLEASE_APP_ID` and its PEM
   private key as `RELEASE_PLEASE_APP_PRIVATE_KEY` in Actions secrets. The scoped App
-  token lets release PRs and release publication trigger follow-up workflows; the
-  default `GITHUB_TOKEN` would suppress those events. Do not reuse a developer's SSH/GPG key.
-  When both secrets are absent, release automation reports a notice and a job summary
-  without creating release PRs or tags. Supplying only one secret is a configuration
-  error and fails the job. Once configured, release PRs explicitly target `main`,
-  independently of the repository's default branch.
+  token lets release PR changes trigger normal CI. The bot maintains version and
+  changelog PRs only: `skip-github-release` prevents it from publishing before the
+  artifact pipeline. It neither creates release tags nor publishes releases.
+  Do not reuse a developer's SSH/GPG key. With both secrets absent, PR automation
+  reports a notice and does nothing; only one supplied secret fails the job.
+  Release PRs explicitly target `main`, independently of the default branch.
 - Allow GitHub Actions and the required pinned actions. Permit the repository's
   `GITHUB_TOKEN` to publish its GHCR image and chart packages; existing packages may
-  need to grant this repository Actions access. Publication jobs alone receive
-  package/content write permissions.
+  need to grant this repository Actions access. Only protected release jobs receive
+  package/content write permissions. The protected draft preflight also needs
+  Contents write because GitHub requires push access to list draft releases;
+  source verification and scanners remain read-only.
 - Require CI, commit-lint and applicable Security checks before merging. Protect
   `main` and `v*` tags, restricting tag creation, mutation and deletion to reviewed
   release automation. Configure the `release` environment used by all publication
@@ -125,37 +170,67 @@ following repository settings before enabling publication:
   Ancestry checks alone are not a trust boundary: workflows and local actions come
   from the tagged commit, and someone able to replace that workflow could replace
   its guard. These repository/environment protections must be configured separately.
+- Enable GitHub immutable releases. Drafts remain mutable while assets are staged;
+  only the final job publishes and requires explicit `immutable: true` evidence.
+  Missing or false evidence is a failure, not proof of protection. Do not manually
+  publish, rename, recreate or edit the draft/assets while the pipeline is running.
 - Optionally enable Code Scanning and set the Actions repository variable
   `ENABLE_CODE_SCANNING` to `true`. Without it, SARIF reports remain downloadable
   workflow artifacts, including for PRs/forks. Dependabot configuration covers both
   Go modules and Actions; enable dependency/security updates in repository settings.
 
-The [release manifest](../.release-please-manifest.json) starts from the source's
-`0.1.0-alpha.2` candidate; this is not a claim that the candidate was published.
-The [configuration](../release-please-config.json) starts commit discovery after
-the initial repository commit and keeps alpha prereleases while the provider is
-in development. Release PRs update the manifest/changelog, Make's default version,
-and both Helm version fields together. To leave alpha, review the prerelease
-settings explicitly rather than publishing an accidental stable release.
+The [release manifest](../.release-please-manifest.json) records `0.1.0` for the
+initial release. A source version is not proof that its assets were published;
+check the GitHub Release and every publication job before installing. The
+[configuration](../release-please-config.json) uses normal SemVer release versioning
+without forcing an alpha suffix or GitHub prerelease status. Release PRs update
+the manifest/changelog, Make's default version and both Helm version fields
+together. Pre-1.0 versions remain experimental; a stable tag is not a claim of
+production support or API stability.
 
-Review a release PR and verify the declared major/minor CAPI series in
-[metadata.yaml](../metadata.yaml). Adding a new series requires an explicit contract
-review; version automation does not silently claim support. A tag outside the
-listed series fails validation before image/chart publication. Merge the release
-PR only after the required checks pass. Release-please creates a `vX.Y.Z[-alpha.N]`
-tag and GitHub Release. Only the release's `published` event starts publication;
-a tag push alone does not. This includes alpha prereleases, unlike stable-only
-application deployment pipelines. The release's prerelease flag must match its
-SemVer suffix. Changing that flag later does not republish artifacts.
+The App is optional for a maintainer-authored first release. After explicit review
+and successful checks, merge the version/changelog preparation and record its exact
+merged SHA. Check the declared provider major/minor series and its CAPI contract in
+[metadata.yaml](../metadata.yaml); a new series requires an explicit contract review.
+Then prepare the release in this order:
 
-The read-only validation job checks the event/tag identity and main ancestry before
-running repository tools, validates the CAPI series, and preflights the installation
-packages and all binary architectures without publishing. Its placeholder image
-digest tests packaging only, not registry availability. Reusable CI and Security
-then run on the exact event commit, including both-module lint/race/envtest and
-vulnerability checks. CI builds release-version Linux amd64/arm64 images once and
-smoke-tests each; Security scans those same archives rather than rebuilding them.
-Only after these gates pass can the protected publication jobs publish:
+1. Save a draft with its **title and tag both exactly the version**, reviewed
+   nonempty notes, the merged preparation SHA as target, and the correct prerelease
+   flag. Both name and tag must be unique; draft discovery lists all pages and binds
+   the numeric release ID.
+2. Confirm that draft exists before creating/pushing an annotated tag on that same
+   SHA. Never tag an older alpha-candidate ancestor as a stable release. The tag
+   must equal the source manifest version; CI checks the chart/Make coupling too.
+3. Let the pipeline verify, stage and publish. Do not press GitHub's Publish button
+   first: immutability would prevent the subsequent asset uploads.
+
+For a reviewed stable release, the preparation commands are:
+
+```sh
+VERSION=v0.1.0
+RELEASE_SHA=FULL_REVIEWED_MERGED_SHA
+# Use maintainer credentials; save the draft before the tag push starts CI.
+gh release create "$VERSION" --draft --prerelease=false --target "$RELEASE_SHA" \
+  --title "$VERSION" --notes-file /path/to/reviewed-notes.md
+git tag -a "$VERSION" "$RELEASE_SHA" -m "$VERSION"
+git push origin "refs/tags/$VERSION"
+```
+
+Maintainer or appropriately scoped App credentials must create the tag; a tag
+created with the default `GITHUB_TOKEN` does not trigger another workflow. The
+optional PR bot deliberately does not create releases/tags, avoiding draft/tag
+creation races and premature publication. Normal releases use stable SemVer;
+explicit prerelease tags remain supported when their source version and draft
+flag agree. A `release.published` event never restarts staging.
+
+The read-only validation job checks the annotated tag and main ancestry before
+repository tools, requires the tag/source version to match, and preflights packages
+and all binary architectures without publishing. Its placeholder digest tests
+packaging only, not registry availability. Reusable CI and Security run on the
+exact tagged commit, including both-module lint/race/envtest and vulnerability
+checks. CI builds and smoke-tests release-version Linux amd64/arm64 images once;
+Security scans those same archives. Only after those gates and the protected
+live-draft identity check pass can publication jobs stage these outputs:
 
 - `ghcr.io/<owner>/cluster-api-provider-composite:<tag>` for Linux amd64/arm64,
   with and without the leading `v`. Prereleases do not overwrite `latest` or stable
@@ -174,16 +249,26 @@ Before registry login, the image publisher checks both archives' commit, version
 image ID, platform and OCI source/revision/version labels. It pushes those unchanged
 images and assembles the multiarch index without rebuilding. Image publication must
 succeed before final installation packaging and both chart/release-asset publishers.
-These are separate remote operations, not an atomic transaction; the GitHub Release
-already exists at the start. Inspect every job before advertising a release and
-investigate existing digests/assets after partial failure before retrying.
+These are separate remote operations, not an atomic transaction; the reviewed
+GitHub Release remains a draft during staging. GoReleaser preserves that draft's
+identity/notes and can replace known partial uploads only after a fresh draft
+check. The final protected job requires exactly eight completed assets, preserves
+their identity/size/available digest evidence and notes across publication, checks
+the tag's reviewed commit again, and requires explicit immutable-release evidence.
+
+After partial staging failure, inspect the bound draft and registry digests before
+retrying. After an ambiguous final publication request, re-read that same release
+ID: an already-published immutable release permits verification only, never another
+GoReleaser upload. Do not delete/recreate the release, move/reuse its tag, or undo
+protection. GitHub immutability locks assets and the tag, not all editable release
+metadata. Do not manually change the draft or publish it while jobs are staging.
 No workflow deploys or upgrades a Kubernetes cluster. Existing vulnerability
 findings still require remediation; workflow reuse does not waive Security checks.
 
 After a successful release, use its actual tag and package visibility. For example:
 
 ```sh
-VERSION=vX.Y.Z-alpha.N  # Replace with an existing successful release.
+VERSION=v0.1.0  # Use an actual successfully published release.
 helm upgrade --install composite \
   oci://ghcr.io/numspot/charts/cluster-api-provider-composite \
   --version "${VERSION#v}" --namespace composite-system \
@@ -191,19 +276,10 @@ helm upgrade --install composite \
 ```
 
 Apply matching CRDs before upgrades as described under
-[upgrade and uninstall](#upgrade-and-uninstall). For clusterctl, register the
-release's actual download URL in your normal clusterctl configuration:
-
-```yaml
-providers:
-  - name: composite
-    type: InfrastructureProvider
-    url: https://github.com/numspot/cluster-api-provider-composite/releases/latest/infrastructure-components.yaml
-```
-
-The URL above is clusterctl's version-aware provider repository URL, not proof of
-an existing release. For alpha releases, select an actual published prerelease
-explicitly with `--infrastructure composite:vX.Y.Z-alpha.N`.
+[upgrade and uninstall](#upgrade-and-uninstall). For CAPI-managed installation use
+the [clusterctl registration and commands](#clusterctl). Its repository URL is not
+proof of an existing release. For alpha releases, select an actual published
+prerelease explicitly with `--infrastructure composite:vX.Y.Z-alpha.N`.
 
 ## Managed-service integration
 
@@ -375,8 +451,9 @@ existing ServiceAccount. Labels and names from an older chart may differ from th
 current standalone chart, so an image update and a change of installer are separate
 operations. Verify the new replica's rollout before treating the upgrade as complete.
 
-This release removes `CompositeCluster.spec.providers` and historical cluster
-provider bindings. It is a breaking pre-release change: finish teardown of legacy
+Compared with earlier development snapshots, this release omits
+`CompositeCluster.spec.providers` and historical cluster provider bindings. This is
+a breaking change for legacy development installations: finish teardown of their
 compositions using the old controller before upgrading. There is no automatic
 migration or adoption of their existing children. Create new attachments as
 CompositeProvider resources after installing matching CRDs and controller. Do not
@@ -401,7 +478,7 @@ first, or reinstall a compatible operator. Deleting CRDs is not workload cleanup
 ## Move and restore
 
 Automatic cross-management-cluster moves are unsupported for template-backed profiles
-in this alpha. Attachment bindings retain provider, cluster and profile UIDs and
+in this pre-1.0 provider. Attachment bindings retain provider, cluster and profile UIDs and
 source-template UID/generation. Recreated objects have different UIDs, even with
 identical manifests, and are not silently accepted.
 

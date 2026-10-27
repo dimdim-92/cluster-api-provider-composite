@@ -16,7 +16,7 @@ SETUP_ENVTEST := $(CURDIR)/.tools/$(SETUP_ENVTEST_VERSION)/setup-envtest
 KUBEBUILDER_ASSETS ?=
 COVERPROFILE ?=
 # x-release-please-start-version
-VERSION ?= v0.1.0-alpha.2
+VERSION ?= v0.1.0
 # x-release-please-end
 IMAGE ?= ghcr.io/numspot/cluster-api-provider-composite:$(VERSION)
 PLATFORM ?= linux/amd64

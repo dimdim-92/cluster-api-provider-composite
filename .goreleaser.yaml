@@ -35,8 +35,14 @@ changelog:
   disable: true
 
 release:
+  draft: true
+  use_existing_draft: true
+  replace_existing_artifacts: true
+  name_template: "{{ .Tag }}"
   prerelease: auto
   mode: keep-existing
+  preflight:
+    fail_on_error: true
   extra_files:
     - glob: out/release/infrastructure-components.yaml
     - glob: out/release/metadata.yaml

@@ -88,9 +88,10 @@ sign-offs. Security and conduct reports use the private maintainer route describ
 in those policies. Adopting the CNCF behavioral standard does not establish CNCF
 membership or a CNCF reporting channel for this project.
 
-[`.github/`](../../../.github/) contains a bug-report form, PR template, workflow
-and CODEOWNERS placeholder. Add ownership patterns only for confirmed GitHub
-identities; the current file makes no automatic reviewer assignments. Prow and
+[`.github/`](../../../.github/) contains a bug-report form, PR template, workflows
+and repository-wide [CODEOWNERS](../../../.github/CODEOWNERS). The ownership rule
+names the verified GitHub identities of Dimitri David and Clément Phu. Confirm
+identities and repository write access before changing ownership. Prow and
 Kubernetes-org ownership rules are not prerequisites for this Numspot repository.
 
 ### Verification

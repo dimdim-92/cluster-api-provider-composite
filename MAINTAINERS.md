@@ -7,8 +7,10 @@
 | Émilien Puget | Maintainer | Numspot | emilien.puget@numspot.com |
 
 Contact a listed maintainer to coordinate work or arrange a private security
-report. Confirm GitHub identities, participation and permissions before assigning
-repository ownership rules; `.github/CODEOWNERS` currently has no active patterns.
+report. Repository-wide [code ownership](.github/CODEOWNERS) is assigned to
+Dimitri David ([@dimdim-92](https://github.com/dimdim-92)) and
+Clément Phu ([@cleman95](https://github.com/cleman95)). Confirm GitHub identities,
+participation and repository write access before changing ownership rules.
 
 See [contributing](CONTRIBUTING.md), [governance](GOVERNANCE.md) and
 [security](SECURITY.md).

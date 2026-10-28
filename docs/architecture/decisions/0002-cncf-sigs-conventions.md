@@ -90,9 +90,10 @@ membership or a CNCF reporting channel for this project.
 
 [`.github/`](../../../.github/) contains a bug-report form, PR template, workflows
 and repository-wide [CODEOWNERS](../../../.github/CODEOWNERS). The ownership rule
-names the verified GitHub identities of Dimitri David and Clément Phu. Confirm
-identities and repository write access before changing ownership. Prow and
-Kubernetes-org ownership rules are not prerequisites for this Numspot repository.
+names the verified GitHub identities of Dimitri David, Clément Phu and Émilien
+Puget. Confirm identities and repository write access before changing ownership.
+Prow and Kubernetes-org ownership rules are not prerequisites for this Numspot
+repository.
 
 ### Verification
 

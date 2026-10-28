@@ -163,9 +163,11 @@ workflow dependency. Configure these settings before publication:
   package/content write permissions. The protected draft preflight also needs
   Contents write because GitHub requires push access to list draft releases;
   source verification and scanners remain read-only.
-- Require CI, commit-lint and applicable Security checks before merging. Protect
-  `main` and `v*` tags, restricting tag creation, mutation and deletion to reviewed
-  release automation. Configure the `release` environment used by all publication
+- Require CI, commit-lint, `DCO` and applicable Security checks before merging.
+  The `DCO` check validates author-matching sign-off trailers on all PR contribution
+  commits, including automation, without modifying commits or repository rulesets.
+  Protect `main` and `v*` tags, restricting tag creation, mutation and deletion to
+  reviewed release automation. Configure the `release` environment used by all publication
   jobs with required reviewers and appropriate tag rules before enabling it.
   Ancestry checks alone are not a trust boundary: workflows and local actions come
   from the tagged commit, and someone able to replace that workflow could replace

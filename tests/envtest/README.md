@@ -3,7 +3,7 @@
 ```sh
 make envtest-download
 make test
-make test TEST=TestProviderAddon
+make test TEST=TestProviderAttachment
 make test TEST=TestOperatorRuntime
 ```
 
@@ -22,9 +22,7 @@ Historical cluster provider-binding records are unsupported.
 Retained regressions cover native ownership and UID/resourceVersion race guards,
 source pin/drift protection, immutable provider references, credentials isolation,
 independent empty-cluster readiness, owner/pause gates, shared worker consumers,
-ordered source-independent retirement, API contracts and managed-service fixtures.
-The managed-service examples use hosted-control-plane-only topology patches and
-separate CompositeProvider resources, not provider topology variables.
+ordered source-independent retirement and API contracts.
 
 Passing envtest does not establish native cloud compatibility or safe workload
 moves. Real native-stack integration must be tested separately.

@@ -39,8 +39,8 @@ const (
 // This is deliberately an OPEN string and not a CRD enum. A closed enum makes
 // adding a provider an API change requiring CRD regeneration and redeployment
 // — adding a provider should not require changing these shared types.
-// Validity reduces to "are the provider's child CRDs installed on this Service
-// Cluster", surfaced as Ready=False/ProviderNotInstalled when they are not.
+// Validity reduces to "are the provider's child CRDs installed on this management
+// cluster", surfaced as Ready=False/ProviderNotInstalled when they are not.
 //
 // +kubebuilder:validation:MinLength=1
 // +kubebuilder:validation:MaxLength=63
@@ -89,8 +89,8 @@ type FailureDomain struct {
 	Name string `json:"name,omitempty"`
 
 	// controlPlane determines if this failure domain is suitable for control
-	// plane machines. Always false here: control planes are hosted by Kamaji on
-	// the Service Cluster, never on Tenant Cluster infrastructure.
+	// plane machines. Always false here: hosted control planes do not use the
+	// workload infrastructure's failure domains.
 	// +optional
 	ControlPlane *bool `json:"controlPlane,omitempty"`
 

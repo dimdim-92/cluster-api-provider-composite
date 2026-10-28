@@ -52,7 +52,7 @@ var kubeadmConfigTemplateGVK = schema.FromAPIVersionAndKind(mint.KubeadmConfigTe
 // requireServed fails unless the API server serves gvk exactly.
 func requireServed(mgr ctrl.Manager, gvk schema.GroupVersionKind) error {
 	if _, err := mgr.GetRESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version); err != nil {
-		return fmt.Errorf("this Service Cluster does not serve %s (Cluster API v1.11+ is required): %w", gvk, err)
+		return fmt.Errorf("this management cluster does not serve %s (Cluster API v1.11+ is required): %w", gvk, err)
 	}
 
 	return nil
@@ -333,7 +333,7 @@ func (r *CompositeClusterReconciler) reconcileNormal(
 		return ctrl.Result{}, err
 	}
 	// Provider attachments have independent readiness; an empty infrastructure
-	// contract must unblock the hosted control plane before addons exist.
+	// contract must unblock the hosted control plane before attachments exist.
 	summarize(cc, nil, summary{
 		failureDomains: domains, providersReady: true,
 		providersProvisioned: true, endpointPropagated: true, bootstrapReady: true,
@@ -737,7 +737,7 @@ func summarize(cc *infrav1.CompositeCluster, statuses []infrav1.ProviderStatus, 
 			bootstrapNotReadyReason(s.endpointPropagated, statuses), "")
 	}
 
-	// Provider and node-pool inventory is observed independently after addon
+	// Provider and node-pool inventory is observed independently after attachment
 	// reconciliation; it must not alter the infrastructure contract's readiness.
 	cc.Status.FailureDomains = s.failureDomains
 

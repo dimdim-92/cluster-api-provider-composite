@@ -21,7 +21,7 @@ The provider installs four CRDs, all serving and storing
 | Resource | Scope | Purpose |
 |---|---|---|
 | `CompositeProviderTemplate` (`cpt`) | Cluster | Immutable reusable provider/account/region configuration and native template references |
-| `CompositeProvider` (`cprov`) | Namespaced | An addon attachment selecting a cluster, provider template and namespace-local credential Secret |
+| `CompositeProvider` (`cprov`) | Namespaced | A provider attachment selecting a cluster, provider template and namespace-local credential Secret |
 | `CompositeCluster` (`cocl`) | Namespaced | Native resource ownership, endpoint propagation, bootstrap templates and readiness |
 | `CompositeClusterTemplate` (`cct`) | Namespaced | Immutable infrastructure template for ClusterClass |
 
@@ -30,28 +30,31 @@ rules. [Generated schemas](api/config/crd/bases/) and [Go API types](api/v1beta2
 are the authoritative API definitions.
 
 Start a hosted control plane with `CompositeCluster.spec: {}`. Attach providers
-only through namespaced `CompositeProvider` resources, directly or via MSC supplemental addons:
+only through namespaced `CompositeProvider` resources:
 
 ```yaml
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: CompositeProvider
 metadata:
-  name: supplemental-outscale-provider
+  name: outscale-main
   namespace: demo
 spec:
   clusterRef: {name: demo-infra}
-  templateRef: {name: osc-paris-addon-v1}
-  credentialsRef: {name: outscale-credentials}
+  templateRef: {name: outscale-account-a-r1}
   infraSpec:
     network:
       clusterName: demo
+      internetService:
+        name: demo
+      net:
+        ipRange: 10.42.0.0/16
 ```
 
-The selected template declares `credentialsNamePaths: [/credentials/fromSecret]`.
-MSC expands provider-specific worker addons; Composite never creates workers.
-See the [provider-addon examples](local/managed-service/provider-addons/) and
-[usage guide](docs/usage.md#provider-addons).
-The [complete walkthrough](docs/examples/provider-addons.md) covers setup through cleanup.
+The selected template supplies native configuration and credential references.
+CAPI and native providers manage workers; Composite never creates them. See the
+[single-cloud example](local/compositecluster-sample.yaml),
+[spanning example](local/compositecluster-spanning-sample.yaml) and
+[usage guide](docs/usage.md#create-a-cluster-attachment).
 
 ## Current boundaries
 

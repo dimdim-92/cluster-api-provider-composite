@@ -34,8 +34,8 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          CompositeProvider binds an MSC supplemental addon to provider-specific infrastructure and bootstrap.
-          The CompositeCluster remains the controller owner of generated children; MSC and CAPI own workers.
+          CompositeProvider attaches provider-specific infrastructure and bootstrap to a CompositeCluster.
+          The CompositeCluster owns generated children; CAPI and native providers manage workers.
         properties:
           apiVersion:
             description: |-

@@ -156,7 +156,7 @@ func (r *CompositeClusterReconciler) attachmentProviders(ctx context.Context, cc
 	return providers, nil
 }
 
-// Addon configuration failures become provider conditions, not contract failures.
+// Attachment configuration failures become provider conditions, not contract failures.
 // Unreadable durable identity remains a hard error and cannot authorize writes.
 func (r *CompositeClusterReconciler) planAttachments(
 	ctx context.Context,

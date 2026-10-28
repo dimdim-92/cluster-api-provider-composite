@@ -64,9 +64,8 @@ const (
 	NotDeletingReason = "NotDeleting"
 
 	// ProviderNotInstalledReason means the provider's child CRDs are not
-	// present on this Service Cluster. One image is deployable to both
-	// single-cloud and multi-cloud Service Clusters, so this is an expected
-	// state rather than a bug.
+	// present on this management cluster. One image supports both single-cloud
+	// and multi-cloud installations, so this is an expected state rather than a bug.
 	ProviderNotInstalledReason = "ProviderNotInstalled"
 
 	// RenderFailedReason means a child could not be rendered from its payload

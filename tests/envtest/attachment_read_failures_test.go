@@ -51,8 +51,8 @@ func TestProviderStatus_InventoryReadFailurePreservesSummary(t *testing.T) {
 	cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{
 		ControlPlaneEndpoint: infrav1.APIEndpoint{Host: "192.0.2.81", Port: 6443},
 	})
-	p := addonProvider(t, cc, template.Name, "paris")
-	addonWorkerPool(t, cc.Namespace, cluster.Name, "workers", cc.Name+"-paris")
+	p := createProviderAttachment(t, cc, template.Name, "paris")
+	createNativeWorkerPool(t, cc.Namespace, cluster.Name, "workers", cc.Name+"-paris")
 	r := newClusterReconciler()
 	_, cc, err := reconcileCluster(t, r, cc)
 	require.NoError(t, err)
@@ -74,7 +74,7 @@ func TestProviderStatus_InventoryReadFailurePreservesSummary(t *testing.T) {
 	assert.Equal(t, before.Status.Providers[0].Provisioned, current.Provisioned)
 	requireCondition(t, current.Conditions, infrav1.ReadyCondition, metav1.ConditionUnknown, infrav1.WaitingForProvidersReason)
 	requireCondition(t, cc.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
-	requireCondition(t, getAddon(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
+	requireCondition(t, getProviderAttachment(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
 	status, marshalErr := json.Marshal(cc.Status)
 	require.NoError(t, marshalErr)
 	assert.NotContains(t, string(status), "SECRET-CANARY")
@@ -102,11 +102,11 @@ func (r attachmentFailureReader) Get(ctx context.Context, key client.ObjectKey, 
 	return nil
 }
 
-func TestProviderAddon_SourceReadFailurePreservesObservations(t *testing.T) {
+func TestProviderAttachment_SourceReadFailurePreservesObservations(t *testing.T) {
 	template := newRegionalProfile(t)
-	cluster := newCAPICluster(t, newNamespace(t), "observation-addon")
+	cluster := newCAPICluster(t, newNamespace(t), "observation-attachment")
 	cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
-	p := addonProvider(t, cc, template.Name, "regional")
+	p := createProviderAttachment(t, cc, template.Name, "regional")
 	r := newClusterReconciler()
 	setEndpoint(t, cc, cluster, "203.0.113.10", 7443)
 	_, cc, err := reconcileCluster(t, r, cc)
@@ -114,7 +114,7 @@ func TestProviderAddon_SourceReadFailurePreservesObservations(t *testing.T) {
 	markFakeClusterReady(t, cc.Namespace, cc.Name)
 	_, cc, err = reconcileCluster(t, r, cc)
 	require.NoError(t, err)
-	before := getAddon(t, p)
+	before := getProviderAttachment(t, p)
 	requireCondition(t, before.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
 	domains := cc.Status.FailureDomains
 	pins := cc.Annotations[infrav1.ProviderAttachmentsAnnotation]
@@ -127,7 +127,7 @@ func TestProviderAddon_SourceReadFailurePreservesObservations(t *testing.T) {
 	_, current, err := reconcileCluster(t, r, cc)
 	require.ErrorIs(t, err, cause)
 	assert.NotContains(t, err.Error(), "SECRET-CANARY")
-	fresh := getAddon(t, p)
+	fresh := getProviderAttachment(t, p)
 	requireCondition(t, fresh.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionUnknown, infrav1.WaitingForProvidersReason)
 	assert.Equal(t, before.Status.Initialization, fresh.Status.Initialization)
 	assert.Equal(t, before.Status.InfrastructureRef, fresh.Status.InfrastructureRef)
@@ -141,5 +141,5 @@ func TestProviderAddon_SourceReadFailurePreservesObservations(t *testing.T) {
 	r.APIReader = k8s
 	_, _, err = reconcileCluster(t, r, current)
 	require.NoError(t, err)
-	requireCondition(t, getAddon(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
+	requireCondition(t, getProviderAttachment(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
 }

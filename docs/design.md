@@ -22,7 +22,7 @@ Cluster/demo
                          -> KubeadmConfigTemplate/demo-infra-openstack
 
 CompositeProviderTemplate -> native InfraClusterTemplate + KubeadmConfigTemplate references
-Direct manifest / MSC addon -> CompositeProvider -> templateRef + clusterRef + credentialsRef
+CompositeProvider -> templateRef + clusterRef + credentialsRef
 MachineDeployment -> native MachineTemplate + selected bootstrap template
 ```
 
@@ -85,11 +85,10 @@ bastions require separate native-provider compatibility review.
   the direct API reader and never mutated, adopted or deleted by Composite.
 
 `CompositeClusterTemplate` carries shared bootstrap and endpoint configuration for
-ClusterClass and has an immutable template body. The
-[managed-service manifests](usage.md#managed-service-manifests) start an empty
+ClusterClass and has an immutable template body. Start with an empty
 CompositeCluster; provider attachments are separate CompositeProvider resources,
-not Cluster topology variables or ClusterClass patches. MSC manages the Cluster,
-CAPI manages infrastructure/control plane, and Composite manages native children.
+not Cluster topology variables or ClusterClass patches. CAPI manages the Cluster's
+infrastructure/control-plane lifecycle, and Composite manages native children.
 Full integration needs testing with the intended native stack.
 
 A cluster without CompositeProvider resources is allowed: the hosted control plane
@@ -106,9 +105,9 @@ An admitted manifest can therefore still report a reconciliation error.
 
 ### Namespaced provider attachments
 
-`CompositeProvider` is the concrete provider resource created directly or by an MSC
-supplemental addon in the space's target namespace. Its immutable `clusterRef` selects the local
-CompositeCluster; `templateRef` selects a cluster-wide CompositeProviderTemplate.
+`CompositeProvider` is the concrete provider resource created in the consumer's
+namespace. Its immutable `clusterRef` selects the local CompositeCluster;
+`templateRef` selects a cluster-wide CompositeProviderTemplate.
 `credentialsRef.name` selects native credentials in the same target namespace;
 the template declares protected `credentialsNamePaths`. Composite never reads Secrets.
 Allowed `infraSpec` and `bootstrap` overrides remain native JSON.
@@ -124,12 +123,12 @@ latched initialization and infrastructure/bootstrap references. CompositeCluster
 mirrors current and draining attachments in `status.providers`, retaining the
 existing provider status shape and adding `nodePools` references. Conditions in
 that summary refer to the CompositeProvider generation and own their transition
-times, including inventory failure/recovery and deletion observations. Addon failures and worker
-availability do not gate CompositeCluster Ready or initialization. Native failure
-domains are still published with unchanged zone names; provider configuration
-remains exclusively on CompositeProvider resources.
+times, including inventory failure/recovery and deletion observations. Attachment
+failures and worker availability do not gate CompositeCluster Ready or initialization.
+Native failure domains are still published with unchanged zone names; provider
+configuration remains exclusively on CompositeProvider resources.
 
-Several MSC worker child addons may consume one provider bootstrap template.
+Several native worker pools may consume one provider bootstrap template.
 The read-only node-pool inventory includes native MachineDeployments in the same
 namespace whose actual Cluster reference and bootstrap GroupKind/name match the
 attachment's durable identity. Labels, regions and naming conventions alone do not

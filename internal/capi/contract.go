@@ -102,8 +102,7 @@ type contractEntry struct {
 // NewContractCache returns a cache reading CRDs through c. Callers pass the
 // manager's API reader rather than its cached client: a CRD Get through the
 // cache would start a cluster-wide informer over every CRD for the handful
-// of lookups this cache ever makes, and the Service Cluster's control plane
-// is memory-starved.
+// of lookups this cache ever makes, adding unnecessary control-plane memory use.
 func NewContractCache(c client.Reader) *ContractCache {
 	return &ContractCache{
 		client: c,
@@ -115,7 +114,7 @@ func NewContractCache(c client.Reader) *ContractCache {
 //
 // A NotFound on the CRD is returned as ErrCRDNotInstalled rather than a generic
 // error: the caller disables that provider instead of failing the cluster, so
-// one image stays deployable to a Service Cluster where only some providers are
+// one image stays deployable to a management cluster where only some providers are
 // installed.
 func (r *ContractCache) Get(ctx context.Context, gk schema.GroupKind) (ChildContract, error) {
 	crd := &apiextensionsv1.CustomResourceDefinition{}

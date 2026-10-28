@@ -281,48 +281,26 @@ the [clusterctl registration and commands](#clusterctl). Its repository URL is n
 proof of an existing release. For alpha releases, select an actual published
 prerelease explicitly with `--infrastructure composite:vX.Y.Z-alpha.N`.
 
-## Managed-service integration
+## Provider attachments
 
-For provider addons, install all four generated CRDs and operator/RBAC from the
-same source revision. Use an empty CompositeCluster, namespaced CompositeProviders
-rendered by MSC supplemental addons, and native MachineDeployments rendered by MSC
-child `addonDefinitions`. Install reusable CompositeProviderTemplates and native
-sources before submitting addons. MSC needs namespaced provider write permissions;
-Composite needs read-only worker/bootstrap provenance permissions for retirement,
-not Secret read permissions.
+Install all four generated CRDs and operator/RBAC from the same source revision.
+Use an empty CompositeCluster to start a hosted control plane before provider
+attachments. Install reusable CompositeProviderTemplates and native sources, then
+create namespaced CompositeProviders and native MachineDeployments separately.
+See [cluster attachments](usage.md#create-a-cluster-attachment) and
+[native workers](usage.md#templates-and-workers) for manifests.
 
-Observe provider Ready and its generation separately from root InfrastructureReady.
+Observe provider Ready and its generation separately from Cluster InfrastructureReady.
 Address template, credential-path and native failures on the provider/native
-resources; CompositeCluster has no provider-selection field. See
-[provider addons](usage.md#provider-addons) for manifests.
+resources; CompositeCluster has no provider-selection field. Publishing a profile
+does not attach it. Composite needs read-only worker/bootstrap provenance permissions
+for retirement, not Secret read permissions.
 
-The [static managed-service bundle](usage.md#managed-service-manifests) separates
-MSC definitions on its management cluster from ClusterClass, templates and profiles
-on its configured service cluster. The latter hosts CAPI and Composite. Enable
-CAPI's ClusterTopology feature and install the template CRDs before the ClusterClass.
-The `composite-templates` namespace holds shared templates, not tenant resources.
-
-Submit the MSI with an explicit empty provider selection to start its hosted
-control plane before profiles. Empty Composite infrastructure becomes Ready
-without an endpoint or native children. The MSC and ClusterClass variable schemas
-must also permit zero entries. Provision profiles and credentials, then append
-references through the MSI; merely creating a profile does not attach it.
-Once attachments exist, their normal readiness gates apply.
-
-MSC's service-cluster identity needs Cluster/MachineDeployment and native
-MachineTemplate write permissions, plus read/list/watch for the teardown blocking
-types. [The supplemental role](../local/managed-service/service-cluster/msc-rbac.yaml)
-lists these rules; bind it to the actual target-cluster identity. Retain MSC's
-normal namespace/watch permissions. CAPI needs permissions for the Composite and
-Kamaji template/object APIs, and Kamaji needs CompositeCluster endpoint writes with
-`CompositeCluster` in `--dynamic-infrastructure-clusters`. Apply these permissions
-to the existing provider installations.
-
-Keep provider credentials in each instance's target namespace throughout teardown.
-The shared definitions use profile names as immutable revisions. A profile's
-`ConfigurationValid` condition and schema/render checks do not establish working
-regional cloud connectivity; verify the tenant API, each pool's join, and CNI/CSI
-behavior against the intended native stack.
+Keep provider credentials in each consumer's namespace throughout teardown.
+Use profile names as immutable revisions. A profile's `ConfigurationValid`
+condition and schema/render checks do not establish working regional cloud
+connectivity; verify the tenant API, each pool's join, and CNI/CSI behavior against
+the intended native stack.
 
 Profiles may select native Secret names with `credentialsRef.name` and explicit
 `credentialsRef.namePaths`. These names resolve in the consuming namespace; shared

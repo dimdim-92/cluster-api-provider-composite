@@ -61,7 +61,7 @@ func TestOperatorRuntime(t *testing.T) {
 	t.Run("custom-group-permissions", func(t *testing.T) { testOperatorCustomGroup(t, installation, c, binary) })
 	t.Run("owner-event-group", func(t *testing.T) { testOperatorOwnerEventGroup(t, installation, c, binary) })
 	t.Run("profile-catalog", func(t *testing.T) { testOperatorProfiles(t, installation, c, binary) })
-	t.Run("provider-addons", func(t *testing.T) { testOperatorProviderAddons(t, installation, c, binary) })
+	t.Run("provider-attachments", func(t *testing.T) { testOperatorProviderAttachments(t, installation, c, binary) })
 }
 
 func operatorEnvironment(t *testing.T) (*envtest.Environment, client.Client) {

@@ -37,17 +37,17 @@ func TestProviderStatus_ProvidersAndNodePools(t *testing.T) {
 	cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{
 		ControlPlaneEndpoint: infrav1.APIEndpoint{Host: "192.0.2.80", Port: 6443},
 	})
-	paris := addonProvider(t, cc, template.Name, "paris")
-	varsovie := addonProvider(t, cc, template.Name, "varsovie", map[string]any{"infraClusterName": "regional-infrastructure"})
-	large := addonWorkerPool(t, cc.Namespace, cluster.Name, "large", cc.Name+"-paris")
-	small := addonWorkerPool(t, cc.Namespace, cluster.Name, "small", cc.Name+"-paris")
-	addonWorkerPool(t, cc.Namespace, cluster.Name, "regional", cc.Name+"-varsovie")
-	addonWorkerPool(t, cc.Namespace, "another-owner", "other-cluster", cc.Name+"-paris")
-	addonWorkerPool(t, newNamespace(t), cluster.Name, "other-namespace", cc.Name+"-paris")
-	wrongKind := addonWorkerPool(t, cc.Namespace, cluster.Name, "other-bootstrap", cc.Name+"-paris")
+	paris := createProviderAttachment(t, cc, template.Name, "paris")
+	varsovie := createProviderAttachment(t, cc, template.Name, "varsovie", map[string]any{"infraClusterName": "regional-infrastructure"})
+	large := createNativeWorkerPool(t, cc.Namespace, cluster.Name, "large", cc.Name+"-paris")
+	small := createNativeWorkerPool(t, cc.Namespace, cluster.Name, "small", cc.Name+"-paris")
+	createNativeWorkerPool(t, cc.Namespace, cluster.Name, "regional", cc.Name+"-varsovie")
+	createNativeWorkerPool(t, cc.Namespace, "another-owner", "other-cluster", cc.Name+"-paris")
+	createNativeWorkerPool(t, newNamespace(t), cluster.Name, "other-namespace", cc.Name+"-paris")
+	wrongKind := createNativeWorkerPool(t, cc.Namespace, cluster.Name, "other-bootstrap", cc.Name+"-paris")
 	require.NoError(t, unstructured.SetNestedField(wrongKind.Object, "ForeignTemplate", "spec", "template", "spec", "bootstrap", "configRef", "kind"))
 	require.NoError(t, k8s.Update(t.Context(), wrongKind))
-	wrongGroup := addonWorkerPool(t, cc.Namespace, cluster.Name, "other-group", cc.Name+"-paris")
+	wrongGroup := createNativeWorkerPool(t, cc.Namespace, cluster.Name, "other-group", cc.Name+"-paris")
 	require.NoError(
 		t,
 		unstructured.SetNestedField(wrongGroup.Object, "foreign.example.test", "spec", "template", "spec", "bootstrap", "configRef", "apiGroup"),
@@ -65,7 +65,7 @@ func TestProviderStatus_ProvidersAndNodePools(t *testing.T) {
 	assertProviderPoolNames(t, &cc.Status.Providers[1], "regional")
 	requireCondition(t, cc.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
 	for i, p := range []client.Object{paris, varsovie} {
-		observed := getAddon(t, p)
+		observed := getProviderAttachment(t, p)
 		assert.Equal(t, observed.Status.InfrastructureRef, *cc.Status.Providers[i].ChildRef)
 		assert.Equal(t, observed.Status.BootstrapTemplateRef, *cc.Status.Providers[i].BootstrapTemplateRef)
 		for j := range observed.Status.Conditions {
@@ -106,8 +106,8 @@ func TestProviderStatus_ProvidersAndNodePools(t *testing.T) {
 func TestProviderStatus_UnboundFailureHasNoInventedChildren(t *testing.T) {
 	cluster := newCAPICluster(t, newNamespace(t), "pending-provider")
 	cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
-	addonProvider(t, cc, "missing-template", "paris")
-	addonWorkerPool(t, cc.Namespace, cluster.Name, "unbound", cc.Name+"-paris")
+	createProviderAttachment(t, cc, "missing-template", "paris")
+	createNativeWorkerPool(t, cc.Namespace, cluster.Name, "unbound", cc.Name+"-paris")
 	_, cc, err := reconcileCluster(t, newClusterReconciler(), cc)
 	require.NoError(t, err)
 	require.Len(t, cc.Status.Providers, 1)
@@ -130,8 +130,8 @@ func TestProviderStatus_ClusterDeletionKeepsInventoryCurrent(t *testing.T) {
 			cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{
 				ControlPlaneEndpoint: infrav1.APIEndpoint{Host: "192.0.2.82", Port: 6443},
 			})
-			addonProvider(t, cc, template.Name, "paris")
-			pool := addonWorkerPool(t, cc.Namespace, cluster.Name, "workers", cc.Name+"-paris")
+			createProviderAttachment(t, cc, template.Name, "paris")
+			pool := createNativeWorkerPool(t, cc.Namespace, cluster.Name, "workers", cc.Name+"-paris")
 			r := newClusterReconciler()
 			_, cc, err := reconcileCluster(t, r, cc)
 			require.NoError(t, err)
@@ -174,7 +174,7 @@ func TestProviderStatus_DeletingProviderCannotRemainReady(t *testing.T) {
 	cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{
 		ControlPlaneEndpoint: infrav1.APIEndpoint{Host: "192.0.2.83", Port: 6443},
 	})
-	p := addonProvider(t, cc, template.Name, "paris")
+	p := createProviderAttachment(t, cc, template.Name, "paris")
 	r := newClusterReconciler()
 	_, cc, err := reconcileCluster(t, r, cc)
 	require.NoError(t, err)

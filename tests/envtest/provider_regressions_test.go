@@ -44,7 +44,7 @@ func TestProviderRegressions_BootstrapMergeAndSSA(t *testing.T) {
 						{"name":"cloud-provider","value":"external"},{"name":"node-labels","value":"pool=old"}]}}
 				}`)}})
 				setEndpoint(t, cc, cluster, "192.0.2.70", 6443)
-				p := addonProvider(t, cc, template.Name, "paris")
+				p := createProviderAttachment(t, cc, template.Name, "paris")
 				r := newClusterReconciler()
 				_, cc, err := reconcileCluster(t, r, cc)
 				require.NoError(t, err)
@@ -59,7 +59,7 @@ func TestProviderRegressions_BootstrapMergeAndSSA(t *testing.T) {
 				markFakeClusterReady(t, cc.Namespace, cc.Name)
 				_, cc, err = reconcileCluster(t, r, cc)
 				require.NoError(t, err)
-				requireCondition(t, getAddon(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
+				requireCondition(t, getProviderAttachment(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
 				updated := getUnstructured(t, kubeadmConfigTemplateGVK, cc.Namespace, created.GetName())
 				require.NotNil(t, updated)
 				assertBootstrapRegressionUpdate(t, created, updated, actorFields, change)
@@ -187,7 +187,7 @@ func TestProviderRegressions_SourceUIDPins(t *testing.T) {
 			cluster := newCAPICluster(t, newNamespace(t), "source-pins")
 			cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
 			setEndpoint(t, cc, cluster, "192.0.2.71", 6443)
-			p := addonProvider(t, cc, template.Name, "paris")
+			p := createProviderAttachment(t, cc, template.Name, "paris")
 			r := newClusterReconciler()
 			_, cc, err := reconcileCluster(t, r, cc)
 			require.NoError(t, err)
@@ -207,11 +207,11 @@ func TestProviderRegressions_SourceUIDPins(t *testing.T) {
 			assert.Equal(t, generation, source.GetGeneration())
 			_, cc, err = reconcileCluster(t, r, cc)
 			require.NoError(t, err)
-			requireCondition(t, getAddon(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
+			requireCondition(t, getProviderAttachment(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
 			infra := getUnstructured(t, fakeClusterGVK, cc.Namespace, cc.Name)
 			kct := getUnstructured(t, kubeadmConfigTemplateGVK, cc.Namespace, cc.Name+"-paris")
 			clusterPin := cc.Annotations[infrav1.ProviderAttachmentsAnnotation]
-			providerPin := getAddon(t, p).Annotations[infrav1.ProviderBindingAnnotation]
+			providerPin := getProviderAttachment(t, p).Annotations[infrav1.ProviderBindingAnnotation]
 			require.NotEmpty(t, clusterPin)
 			require.NotEmpty(t, providerPin)
 			require.NoError(t, k8s.Delete(t.Context(), source))
@@ -223,9 +223,15 @@ func TestProviderRegressions_SourceUIDPins(t *testing.T) {
 			assert.Equal(t, generation, replacement.GetGeneration())
 			_, cc, err = reconcileCluster(t, r, cc)
 			require.NoError(t, err)
-			requireCondition(t, getAddon(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionFalse, infrav1.ProfileMismatchReason)
+			requireCondition(
+				t,
+				getProviderAttachment(t, p).Status.Conditions,
+				infrav1.ReadyCondition,
+				metav1.ConditionFalse,
+				infrav1.ProfileMismatchReason,
+			)
 			assert.Equal(t, clusterPin, cc.Annotations[infrav1.ProviderAttachmentsAnnotation])
-			assert.Equal(t, providerPin, getAddon(t, p).Annotations[infrav1.ProviderBindingAnnotation])
+			assert.Equal(t, providerPin, getProviderAttachment(t, p).Annotations[infrav1.ProviderBindingAnnotation])
 			assert.Equal(t, infra.Object, getUnstructured(t, fakeClusterGVK, cc.Namespace, cc.Name).Object)
 			assert.Equal(t, kct.Object, getUnstructured(t, kubeadmConfigTemplateGVK, cc.Namespace, cc.Name+"-paris").Object)
 		})
@@ -239,7 +245,7 @@ func TestProviderRegressions_MissingPinsCannotReconstruct(t *testing.T) {
 			cluster := newCAPICluster(t, newNamespace(t), "missing-pins")
 			cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
 			setEndpoint(t, cc, cluster, "192.0.2.72", 6443)
-			p := addonProvider(t, cc, template.Name, "paris")
+			p := createProviderAttachment(t, cc, template.Name, "paris")
 			r := newClusterReconciler()
 			_, cc, err := reconcileCluster(t, r, cc)
 			require.NoError(t, err)
@@ -250,18 +256,24 @@ func TestProviderRegressions_MissingPinsCannotReconstruct(t *testing.T) {
 				require.NoError(t, k8s.Update(t.Context(), cc))
 			}
 			if lost != "cluster" {
-				fresh := getAddon(t, p)
+				fresh := getProviderAttachment(t, p)
 				delete(fresh.Annotations, infrav1.ProviderBindingAnnotation)
 				require.NoError(t, k8s.Update(t.Context(), fresh))
 			}
 			_, cc, err = reconcileCluster(t, r, cc)
 			require.NoError(t, err)
-			requireCondition(t, getAddon(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionFalse, infrav1.ProfileMismatchReason)
+			requireCondition(
+				t,
+				getProviderAttachment(t, p).Status.Conditions,
+				infrav1.ReadyCondition,
+				metav1.ConditionFalse,
+				infrav1.ProfileMismatchReason,
+			)
 			if lost != "provider" {
 				assert.Empty(t, cc.Annotations[infrav1.ProviderAttachmentsAnnotation])
 			}
 			if lost != "cluster" {
-				assert.Empty(t, getAddon(t, p).Annotations[infrav1.ProviderBindingAnnotation])
+				assert.Empty(t, getProviderAttachment(t, p).Annotations[infrav1.ProviderBindingAnnotation])
 			}
 			assert.Equal(t, infra.Object, getUnstructured(t, fakeClusterGVK, cc.Namespace, cc.Name).Object)
 			assert.Equal(t, kct.Object, getUnstructured(t, kubeadmConfigTemplateGVK, cc.Namespace, cc.Name+"-paris").Object)
@@ -276,7 +288,7 @@ func TestProviderRegressions_OwnerNameDiffersFromInfrastructureName(t *testing.T
 	require.NoError(t, k8s.Update(t.Context(), cluster))
 	cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
 	setEndpoint(t, cc, cluster, "192.0.2.73", 6443)
-	p := addonProvider(t, cc, template.Name, "paris")
+	p := createProviderAttachment(t, cc, template.Name, "paris")
 	_, cc, err := reconcileCluster(t, newClusterReconciler(), cc)
 	require.NoError(t, err)
 	for _, child := range []*unstructured.Unstructured{
@@ -293,7 +305,7 @@ func TestProviderRegressions_OwnerNameDiffersFromInfrastructureName(t *testing.T
 			APIVersion: clusterGVK.GroupVersion().String(), Kind: "Cluster", Name: cluster.Name, UID: cluster.UID,
 		})
 	}
-	assert.Equal(t, "canonical-infrastructure-paris", getAddon(t, p).Status.BootstrapTemplateRef.Name)
+	assert.Equal(t, "canonical-infrastructure-paris", getProviderAttachment(t, p).Status.BootstrapTemplateRef.Name)
 	assert.Nil(t, getUnstructured(t, fakeClusterGVK, cc.Namespace, cluster.Name))
 	assert.Nil(t, getUnstructured(t, kubeadmConfigTemplateGVK, cc.Namespace, cluster.Name+"-paris"))
 }

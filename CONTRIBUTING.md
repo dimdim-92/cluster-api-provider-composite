@@ -35,8 +35,21 @@ Regenerate current target schemas and test attachment lifecycle and source ident
   The Commit Lint workflow checks commits and the PR title used for squash merges.
   Message validation is separate from DCO sign-off and GitHub GPG/SSH verification.
 - Sign off contribution commits under the [DCO](https://developercertificate.org/):
-  `Signed-off-by: Your Name <your.name@example.com>`.
+  `Signed-off-by: Your Name <your.name@example.com>`. The `DCO` check requires a
+  footer trailer matching each commit author's name and email, including real
+  merge commits and bot-authored commits. There are no bot exemptions.
 - Obtain maintainer review and passing repository checks before merge.
+
+Use `git commit --signoff` (or `git commit -s`) for new commits. To add your own
+missing sign-off to the latest commit, use `git commit --amend --no-edit --signoff`.
+For several commits, an interactive rebase can amend each affected commit. Only
+sign off contributions you are entitled to certify; do not invent another author's
+certification. After rewriting an already-pushed PR branch, coordinate with other
+contributors and push with `--force-with-lease` if its branch rules allow it.
+
+The `DCO` check examines contribution commits in the PR's base-to-head range,
+excluding GitHub's synthetic merge commit and pre-existing base history. DCO is a
+contribution certification, not a cryptographic commit-signature check.
 
 See [maintainers](MAINTAINERS.md) for coordination and [governance](GOVERNANCE.md)
 for responsibilities.

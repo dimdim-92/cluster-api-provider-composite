@@ -39,14 +39,16 @@ type githubStep struct {
 }
 
 type githubJob struct {
-	Uses        string            `json:"uses"`
-	Environment string            `json:"environment"`
-	With        map[string]any    `json:"with"`
-	If          string            `json:"if"`
-	Needs       any               `json:"needs"`
-	Permissions map[string]string `json:"permissions"`
-	Steps       []githubStep      `json:"steps"`
-	Strategy    struct {
+	Name           string            `json:"name"`
+	TimeoutMinutes int               `json:"timeout-minutes"`
+	Uses           string            `json:"uses"`
+	Environment    string            `json:"environment"`
+	With           map[string]any    `json:"with"`
+	If             string            `json:"if"`
+	Needs          any               `json:"needs"`
+	Permissions    map[string]string `json:"permissions"`
+	Steps          []githubStep      `json:"steps"`
+	Strategy       struct {
 		Matrix map[string]any `json:"matrix"`
 	} `json:"strategy"`
 }
@@ -73,7 +75,7 @@ func readWorkflow(t *testing.T, name string) githubWorkflow {
 
 func TestGitHubWorkflowActionsArePinnedAndCredentialsAreNotPersisted(t *testing.T) {
 	pin := regexp.MustCompile(`^[^@]+@[0-9a-f]{40}$`)
-	for _, name := range []string{"verify", "commit-lint", "security", "release-please", "release"} {
+	for _, name := range []string{"verify", "commit-lint", "dco", "security", "release-please", "release"} {
 		t.Run(name, func(t *testing.T) {
 			workflow := readWorkflow(t, name)
 			for jobName, job := range workflow.Jobs {
@@ -107,6 +109,33 @@ func TestGitHubCIPreservesCompositeVerification(t *testing.T) {
 	for _, command := range []string{"verify-headers", "verify-api-deps", "verify-generated", "verify-crd-labels", "lint-api", "make test COVERPROFILE=coverage.out", "make build"} {
 		assert.Contains(t, commands.String(), command)
 	}
+}
+
+func TestGitHubDCOChecksEveryPRCommitWithoutPrivilege(t *testing.T) {
+	workflow := readWorkflow(t, "dco")
+	assert.Equal(t, map[string]string{"contents": "read"}, workflow.Permissions)
+	assert.Len(t, workflow.On, 1, "DCO must not scan synthetic main merge commits on push")
+	trigger, ok := workflow.On["pull_request"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, []any{"opened", "reopened", "synchronize", "edited"}, trigger["types"])
+	assert.NotContains(t, trigger, "branches", "DCO applies to PRs targeting every branch")
+	assert.NotContains(t, trigger, "paths", "metadata-only PRs still need sign-offs")
+	job, found := workflow.Jobs["dco"]
+	require.True(t, found)
+	assert.Equal(t, "DCO", job.Name, "keep the required check name stable")
+	assert.Equal(t, 5, job.TimeoutMinutes)
+	assert.Empty(t, job.If, "bot-authored PRs must not bypass contribution checks")
+	require.Len(t, job.Steps, 3)
+	checkout := job.Steps[0]
+	assert.Equal(t, "${{ github.sha }}", checkout.With["ref"])
+	assert.EqualValues(t, 0, checkout.With["fetch-depth"], "complete history must include every PR contribution")
+	assert.Equal(t, false, checkout.With["persist-credentials"])
+	assert.Equal(t, "./.github/actions/setup-tools", job.Steps[1].Uses)
+	check := job.Steps[2]
+	assert.Empty(t, check.If)
+	assert.Equal(t, "${{ github.event.pull_request.base.sha }}", check.Env["DCO_BASE_SHA"])
+	assert.Equal(t, "${{ github.event.pull_request.head.sha }}", check.Env["DCO_HEAD_SHA"], "exclude GitHub's unsigned synthetic merge")
+	assert.Equal(t, `go run ./hack/check-dco -base "$DCO_BASE_SHA" -head "$DCO_HEAD_SHA"`, check.Run)
 }
 
 func TestGitHubSecurityScansBothModulesAndGatesSARIFUploads(t *testing.T) {

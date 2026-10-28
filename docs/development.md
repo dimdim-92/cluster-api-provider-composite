@@ -36,6 +36,7 @@ is no UI bundle, deployment step or private workflow/chart dependency.
 |---|---|
 | [CI](../.github/workflows/verify.yml) | Independent Go, Helm/Kustomize and Docker jobs; source/API/generated checks, vet, build, race/envtest tests, coverage and restricted image smoke tests; reusable for releases |
 | [Commit Lint](../.github/workflows/commit-lint.yml) | Conventional Commits and PR titles, including the eventual squash subject |
+| [DCO](../.github/workflows/dco.yml) | Author-matching sign-off trailers on every contribution commit in PRs targeting any branch |
 | [Security](../.github/workflows/security.yml) | Both-module govulncheck/gosec, source hygiene and Trivy filesystem/IaC/image scans; weekly and manually dispatchable as well as PR/main runs |
 | [release-please](../.github/workflows/release-please.yml) | Maintains stable release PRs from Conventional Commits on main once GitHub App credentials are configured |
 | [Release](../.github/workflows/release.yml) | On annotated version tags, validates source/commit/series, reuses CI/Security, stages tested artifacts in a bound draft and publishes it immutable only after every upload succeeds |
@@ -46,6 +47,27 @@ CI checks generated output in scratch space and never repairs the working source
 `make test COVERPROFILE=coverage.out` writes separate root/API coverage profiles,
 which CI uploads even after a test failure. Docker jobs use the existing operator
 Dockerfile, not longue-vue's frontend/database build.
+
+The `DCO` check runs on PR creation, updates, reopen and edits for every target
+branch, using read-only permissions and complete Git history. Shallow repositories
+are rejected rather than silently omitting earlier commits. It checks the event's
+base-to-head commit range, not GitHub's synthetic merge commit. Every contribution
+commit, including real merge commits and bot-authored commits, needs a footer
+`Signed-off-by` matching the commit author's name and email. Earlier unsigned
+history already reachable from the base is not retroactively checked. Failures
+report bounded commit IDs without publishing commit messages or author data.
+Run the same checker locally with:
+
+```sh
+go run ./hack/check-dco -base "$(git rev-parse origin/main)" -head "$(git rev-parse HEAD)"
+```
+
+Use `git commit --signoff` for new commits. See
+[contributing](../CONTRIBUTING.md#pull-requests) for correcting existing commits.
+The checker does not alter commits, grant a bot exemption, or verify GPG/SSH
+signatures. Keep automated commits signed off too. The real-Git regressions in
+[check-dco](../hack/check-dco/) cover missing/mismatched trailers, earlier unsigned
+commits, merge histories, large ranges, invalid refs and safe diagnostics.
 
 The release caller supplies an exact `release-version`. Reusable CI builds and
 smoke-tests amd64/arm64 images with that version, then retains image archives,

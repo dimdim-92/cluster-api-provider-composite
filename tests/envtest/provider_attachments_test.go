@@ -32,7 +32,12 @@ import (
 	infrav1 "github.com/numspot/cluster-api-provider-composite/api/v1beta2"
 )
 
-func addonProvider(t *testing.T, cc *infrav1.CompositeCluster, templateName, name string, overrides ...map[string]any) *unstructured.Unstructured {
+func createProviderAttachment(
+	t *testing.T,
+	cc *infrav1.CompositeCluster,
+	templateName, name string,
+	overrides ...map[string]any,
+) *unstructured.Unstructured {
 	t.Helper()
 	p := &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": infrav1.GroupVersion.String(), "kind": "CompositeProvider",
@@ -51,32 +56,32 @@ func addonProvider(t *testing.T, cc *infrav1.CompositeCluster, templateName, nam
 	return p
 }
 
-func getAddon(t *testing.T, p client.Object) *infrav1.CompositeProvider {
+func getProviderAttachment(t *testing.T, p client.Object) *infrav1.CompositeProvider {
 	t.Helper()
 	fresh := &infrav1.CompositeProvider{}
 	require.NoError(t, k8s.Get(t.Context(), client.ObjectKeyFromObject(p), fresh))
 	return fresh
 }
 
-func TestProviderAddon_CredentialsAndProtectedOverrides(t *testing.T) {
+func TestProviderAttachment_CredentialsAndProtectedOverrides(t *testing.T) {
 	for _, rejected := range []bool{false, true} {
 		t.Run(map[bool]string{false: "injection", true: "protected-override"}[rejected], func(t *testing.T) {
 			template := regionalProfileDefinition()
 			template.Spec.CredentialsNamePaths = []infrav1.ProfileJSONPointer{"/identityRef/name"}
 			createRegionalProfile(t, k8s, template)
 			protectRegionalProfile(t, template)
-			cluster := newCAPICluster(t, newNamespace(t), "credentials-addon")
+			cluster := newCAPICluster(t, newNamespace(t), "credentials-attachment")
 			cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
 			input := map[string]any{"credentialsRef": map[string]any{"name": "tenant-credentials"}}
 			if rejected {
 				input["infraSpec"] = map[string]any{"identityRef": map[string]any{"name": "SECRET-CANARY"}}
 			}
-			p := addonProvider(t, cc, template.Name, "paris", input)
+			p := createProviderAttachment(t, cc, template.Name, "paris", input)
 			_, cc, err := reconcileCluster(t, newClusterReconciler(), cc)
 			require.NoError(t, err)
 			requireCondition(t, cc.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
 			if rejected {
-				fresh := getAddon(t, p)
+				fresh := getProviderAttachment(t, p)
 				requireCondition(t, fresh.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionFalse, infrav1.OverrideRejectedReason)
 				assert.NotContains(t, fresh.Status.Conditions[0].Message, "SECRET-CANARY")
 				assert.Empty(t, fresh.Finalizers)
@@ -98,7 +103,7 @@ func TestProviderAddon_CredentialsAndProtectedOverrides(t *testing.T) {
 			name, _, err = unstructured.NestedString(source.Object, "spec", "template", "spec", "identityRef", "name")
 			require.NoError(t, err)
 			assert.Equal(t, "fixed", name, "native sources are never modified")
-			fresh := getAddon(t, p)
+			fresh := getProviderAttachment(t, p)
 			assert.Contains(t, fresh.Finalizers, infrav1.ProviderAttachmentFinalizer)
 			assert.Equal(t, cc.UID, metav1.GetControllerOf(fresh).UID)
 		})
@@ -109,26 +114,26 @@ func schemaForSource(ref infrav1.ProviderTemplateReference) schema.GroupVersionK
 	return schema.FromAPIVersionAndKind(ref.APIVersion, ref.Kind)
 }
 
-func TestProviderAddon_CollisionFailsBeforeWrites(t *testing.T) {
+func TestProviderAttachment_CollisionFailsBeforeWrites(t *testing.T) {
 	template := newRegionalProfile(t)
-	cluster := newCAPICluster(t, newNamespace(t), "collision-addon")
+	cluster := newCAPICluster(t, newNamespace(t), "collision-attachment")
 	cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
-	first := addonProvider(t, cc, template.Name, "first")
-	second := addonProvider(t, cc, template.Name, "second")
+	first := createProviderAttachment(t, cc, template.Name, "first")
+	second := createProviderAttachment(t, cc, template.Name, "second")
 	_, cc, err := reconcileCluster(t, newClusterReconciler(), cc)
 	require.NoError(t, err)
 	requireCondition(t, cc.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
 	assert.Empty(t, cc.Annotations[infrav1.ProviderAttachmentsAnnotation])
-	assert.Empty(t, getAddon(t, first).Finalizers)
-	assert.Empty(t, getAddon(t, second).Finalizers)
+	assert.Empty(t, getProviderAttachment(t, first).Finalizers)
+	assert.Empty(t, getProviderAttachment(t, second).Finalizers)
 	assert.Nil(t, getUnstructured(t, fakeClusterGVK, cc.Namespace, cc.Name))
 }
 
-func TestProviderAddon_SourceDriftRetainsChildren(t *testing.T) {
+func TestProviderAttachment_SourceDriftRetainsChildren(t *testing.T) {
 	template := newRegionalProfile(t)
-	cluster := newCAPICluster(t, newNamespace(t), "drift-addon")
+	cluster := newCAPICluster(t, newNamespace(t), "drift-attachment")
 	cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
-	p := addonProvider(t, cc, template.Name, "paris")
+	p := createProviderAttachment(t, cc, template.Name, "paris")
 	r := newClusterReconciler()
 	_, cc, err := reconcileCluster(t, r, cc)
 	require.NoError(t, err)
@@ -143,23 +148,23 @@ func TestProviderAddon_SourceDriftRetainsChildren(t *testing.T) {
 	require.NoError(t, k8s.Update(t.Context(), source))
 	_, cc, err = reconcileCluster(t, r, cc)
 	require.NoError(t, err)
-	requireCondition(t, getAddon(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionFalse, infrav1.ProfileMismatchReason)
+	requireCondition(t, getProviderAttachment(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionFalse, infrav1.ProfileMismatchReason)
 	requireCondition(t, cc.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
 	assert.Equal(t, child.Object, getUnstructured(t, fakeClusterGVK, cc.Namespace, cc.Name).Object)
 }
 
-func TestProviderAddon_WorkersDrainBeforeSourceIndependentTeardown(t *testing.T) {
+func TestProviderAttachment_WorkersDrainBeforeSourceIndependentTeardown(t *testing.T) {
 	template := newRegionalProfile(t)
-	cluster := newCAPICluster(t, newNamespace(t), "teardown-addon")
+	cluster := newCAPICluster(t, newNamespace(t), "teardown-attachment")
 	cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
 	setEndpoint(t, cc, cluster, "192.0.2.40", 6443)
-	p := addonProvider(t, cc, template.Name, "paris")
+	p := createProviderAttachment(t, cc, template.Name, "paris")
 	r := newClusterReconciler()
 	_, cc, err := reconcileCluster(t, r, cc)
 	require.NoError(t, err)
 	bootstrapName := cc.Name + "-paris"
-	first := addonWorkerPool(t, cc.Namespace, cluster.Name, "small", bootstrapName)
-	second := addonWorkerPool(t, cc.Namespace, cluster.Name, "medium", bootstrapName)
+	first := createNativeWorkerPool(t, cc.Namespace, cluster.Name, "small", bootstrapName)
+	second := createNativeWorkerPool(t, cc.Namespace, cluster.Name, "medium", bootstrapName)
 	source := getUnstructured(
 		t,
 		schemaForSource(template.Spec.InfrastructureTemplateRef),
@@ -171,7 +176,7 @@ func TestProviderAddon_WorkersDrainBeforeSourceIndependentTeardown(t *testing.T)
 	_, cc, err = reconcileCluster(t, r, cc)
 	require.NoError(t, err)
 	assert.NotNil(t, getUnstructured(t, fakeClusterGVK, cc.Namespace, cc.Name))
-	requireCondition(t, getAddon(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionFalse, infrav1.DeletingReason)
+	requireCondition(t, getProviderAttachment(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionFalse, infrav1.DeletingReason)
 	require.NoError(t, k8s.Delete(t.Context(), first))
 	_, cc, err = reconcileCluster(t, r, cc)
 	require.NoError(t, err)
@@ -202,7 +207,7 @@ func TestProviderAddon_WorkersDrainBeforeSourceIndependentTeardown(t *testing.T)
 	assert.Equal(t, version, cc.ResourceVersion, "settled infrastructure is write-free")
 }
 
-func addonWorkerPool(t *testing.T, namespace, clusterName, name, bootstrap string) *unstructured.Unstructured {
+func createNativeWorkerPool(t *testing.T, namespace, clusterName, name, bootstrap string) *unstructured.Unstructured {
 	t.Helper()
 	md := &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": clusterGVK.GroupVersion().String(), "kind": "MachineDeployment",
@@ -223,15 +228,15 @@ func addonWorkerPool(t *testing.T, namespace, clusterName, name, bootstrap strin
 	return md
 }
 
-func TestProviderAddon_IndependentReadinessAndCredentials(t *testing.T) {
+func TestProviderAttachment_IndependentReadinessAndCredentials(t *testing.T) {
 	template := newRegionalProfile(t)
-	cluster := newCAPICluster(t, newNamespace(t), "addon-consumer")
+	cluster := newCAPICluster(t, newNamespace(t), "attachment-consumer")
 	cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
 	r := newClusterReconciler()
 	_, cc, err := reconcileCluster(t, r, cc)
 	require.NoError(t, err)
 	requireCondition(t, cc.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
-	p := addonProvider(t, cc, template.Name, "paris")
+	p := createProviderAttachment(t, cc, template.Name, "paris")
 	_, cc, err = reconcileCluster(t, r, cc)
 	require.NoError(t, err)
 	requireCondition(t, cc.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
@@ -241,36 +246,42 @@ func TestProviderAddon_IndependentReadinessAndCredentials(t *testing.T) {
 	markFakeClusterReady(t, cc.Namespace, cc.Name)
 	_, cc, err = reconcileCluster(t, r, cc)
 	require.NoError(t, err)
-	fresh := getAddon(t, p)
+	fresh := getProviderAttachment(t, p)
 	requireCondition(t, fresh.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
 	bootstrap := fresh.Status.BootstrapTemplateRef.Name
 	assert.Equal(t, cc.Name+"-paris", bootstrap)
 	require.NotNil(t, getUnstructured(t, kubeadmConfigTemplateGVK, cc.Namespace, bootstrap))
 }
 
-func TestProviderAddon_InvalidTemplateDoesNotBlockCluster(t *testing.T) {
-	cluster := newCAPICluster(t, newNamespace(t), "pending-addon")
+func TestProviderAttachment_InvalidTemplateDoesNotBlockCluster(t *testing.T) {
+	cluster := newCAPICluster(t, newNamespace(t), "pending-attachment")
 	cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
-	p := addonProvider(t, cc, "missing-template", "paris")
+	p := createProviderAttachment(t, cc, "missing-template", "paris")
 	_, cc, err := reconcileCluster(t, newClusterReconciler(), cc)
 	require.NoError(t, err)
 	requireCondition(t, cc.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
-	requireCondition(t, getAddon(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionFalse, infrav1.ProfileUnavailableReason)
+	requireCondition(
+		t,
+		getProviderAttachment(t, p).Status.Conditions,
+		infrav1.ReadyCondition,
+		metav1.ConditionFalse,
+		infrav1.ProfileUnavailableReason,
+	)
 	assert.Nil(t, getUnstructured(t, fakeClusterGVK, cc.Namespace, cc.Name))
 }
 
-func TestProviderAddon_APIIsNamespaced(t *testing.T) {
+func TestProviderAttachment_APIIsNamespaced(t *testing.T) {
 	crd := &apiextensionsv1.CustomResourceDefinition{}
 	require.NoError(t, k8s.Get(t.Context(), client.ObjectKey{Name: "compositeproviders.infrastructure.cluster.x-k8s.io"}, crd))
 	assert.Equal(t, apiextensionsv1.NamespaceScoped, crd.Spec.Scope)
 }
 
-func TestProviderAddon_ImmutableReferences(t *testing.T) {
+func TestProviderAttachment_ImmutableReferences(t *testing.T) {
 	for _, field := range []string{"clusterRef", "templateRef", "credentialsRef", "infraClusterName"} {
 		t.Run(field, func(t *testing.T) {
-			cluster := newCAPICluster(t, newNamespace(t), "immutable-addon")
+			cluster := newCAPICluster(t, newNamespace(t), "immutable-attachment")
 			cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
-			p := addonProvider(t, cc, "template-v1", "paris", map[string]any{"credentialsRef": map[string]any{"name": "credentials"}})
+			p := createProviderAttachment(t, cc, "template-v1", "paris", map[string]any{"credentialsRef": map[string]any{"name": "credentials"}})
 			var value any = map[string]any{"name": "replacement"}
 			if field == "infraClusterName" {
 				value = "different-infrastructure"
@@ -283,12 +294,12 @@ func TestProviderAddon_ImmutableReferences(t *testing.T) {
 	}
 }
 
-func TestProviderAddon_ClusterDeletionDoesNotNeedSources(t *testing.T) {
+func TestProviderAttachment_ClusterDeletionDoesNotNeedSources(t *testing.T) {
 	template := newRegionalProfile(t)
 	cluster := newCAPICluster(t, newNamespace(t), "deleted-contract")
 	cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
 	setEndpoint(t, cc, cluster, "192.0.2.60", 6443)
-	p := addonProvider(t, cc, template.Name, "paris")
+	p := createProviderAttachment(t, cc, template.Name, "paris")
 	r := newClusterReconciler()
 	_, cc, err := reconcileCluster(t, r, cc)
 	require.NoError(t, err)

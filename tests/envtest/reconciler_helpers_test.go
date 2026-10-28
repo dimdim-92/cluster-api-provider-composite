@@ -39,9 +39,8 @@ import (
 // Shared fixtures for the reconciler tests. The reconcilers are driven by
 // calling Reconcile directly with the suite's live client: no manager, no
 // watches, no cache — every step is deterministic and every object read is
-// fresh. What that cannot exercise (watch wiring, CAPI/CABPK/provider
-// controllers, webhooks) is documented per test and covered on the Service
-// Cluster.
+// fresh. Watch wiring is covered by operator runtime tests; CAPI/CABPK/provider
+// controllers and webhooks require separate native-stack integration.
 
 // apiextensionsv1JSON shortens the opaque payload type in fixtures.
 type apiextensionsv1JSON = apiextensionsv1.JSON
@@ -52,8 +51,8 @@ var (
 	// (cluster-api module) store v1beta2.
 	clusterGVK = clusterv1.GroupVersion.WithKind("Cluster")
 
-	// The one wire version this provider writes: v1beta2, as stored by the
-	// module's CRDs and by the integ Service Cluster.
+	// The bootstrap wire version this provider writes: v1beta2, as stored by
+	// the module's CRDs.
 	kubeadmConfigTemplateGVK = schema.GroupVersionKind{
 		Group: "bootstrap.cluster.x-k8s.io", Version: "v1beta2", Kind: "KubeadmConfigTemplate",
 	}

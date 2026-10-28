@@ -71,11 +71,17 @@ func TestEmptyComposition_AttachLaterAndRetainInitialization(t *testing.T) {
 	_, cc, err := reconcileCluster(t, r, cc)
 	require.NoError(t, err)
 	requireCondition(t, cc.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
-	p := addonProvider(t, cc, "late-profile", "regional")
+	p := createProviderAttachment(t, cc, "late-profile", "regional")
 	_, cc, err = reconcileCluster(t, r, cc)
 	require.NoError(t, err)
 	requireCondition(t, cc.Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
-	requireCondition(t, getAddon(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionFalse, infrav1.ProfileUnavailableReason)
+	requireCondition(
+		t,
+		getProviderAttachment(t, p).Status.Conditions,
+		infrav1.ReadyCondition,
+		metav1.ConditionFalse,
+		infrav1.ProfileUnavailableReason,
+	)
 	assert.True(t, *cc.Status.Initialization.Provisioned)
 	template := regionalProfileDefinition()
 	template.Name, template.GenerateName = "late-profile", ""
@@ -90,7 +96,7 @@ func TestEmptyComposition_AttachLaterAndRetainInitialization(t *testing.T) {
 	markFakeClusterReady(t, cc.Namespace, cc.Name)
 	_, cc, err = reconcileCluster(t, r, cc)
 	require.NoError(t, err)
-	requireCondition(t, getAddon(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
+	requireCondition(t, getProviderAttachment(t, p).Status.Conditions, infrav1.ReadyCondition, metav1.ConditionTrue, infrav1.ReadyReason)
 	assert.Equal(t, cc.Generation, cc.Status.ObservedGeneration)
 	deleteProfileConsumer(t, r, cc)
 }

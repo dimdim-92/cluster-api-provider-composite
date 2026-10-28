@@ -163,20 +163,7 @@ immutable names, source UID/generation drift, status recovery, ownership rejecti
 and source-independent teardown. Current attachment/source pins and name rules
 remain covered without silently rebinding recreated providers or templates.
 
-`make test TEST=TestManagedService` checks the static
-[managed-service examples](usage.md#managed-service-manifests). Its fixtures validate hosted-control-plane-only topology patches, empty CompositeCluster specs,
-separate CompositeProvider references, effective override policy and deterministic
-native/bootstrap naming. Provider selection is not a topology variable. The private MSC module is not a dependency
-of either Go module; render MSClass expressions with the intended MSC version
-before a live integration trial.
-
-Node-pool requests are ManagedServiceSupplementalAddon CRs referencing the two
-reusable pool MSClasses. Each renders native worker resources and reuses Composite's
-generated bootstrap templates. Both cluster instances start without provider
-attachments; apply separate providers or supplemental provider addons afterward.
-Local examples have no Kustomization bundles; the usage guide lists explicit inputs.
-
-`make test TEST=TestProviderAddon` covers namespaced attachments, independent
+`make test TEST=TestProviderAttachment` covers namespaced attachments, independent
 empty-cluster readiness, credential injection/protection, source drift, reference
 immutability, identity collisions, shared worker consumers and ordered teardown.
 `make test TEST=TestProviderStatus` covers the CompositeCluster provider summary,
@@ -187,11 +174,9 @@ conditions, status capacity and replacement-UID isolation; API tests cover node-
 references and deepcopy independence. Teardown regressions keep inventory current
 while native finalizers hold deletion. Workers remain read-only observations.
 
-`TestOperatorRuntime/provider-addons` runs the actual operator under generated RBAC
-and namespace/filter scope, including pool create/delete watch events. The
-`local/managed-service/provider-addons/` classes let
-MSC expand native worker addons; no MSC dependency or Composite worker controller
-is introduced.
+`TestOperatorRuntime/provider-attachments` runs the actual operator under generated RBAC
+and namespace/filter scope, including native pool create/delete watch events.
+Composite observes workers without managing them.
 
 `make test TEST=TestCredentialsRef` covers native credential-name injection,
 protected overrides, endpoint/path conflicts, source isolation, credential-field

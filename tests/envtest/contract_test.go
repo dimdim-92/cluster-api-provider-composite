@@ -54,9 +54,9 @@ func TestContractCache_ResolvesOurCRDs(t *testing.T) {
 }
 
 // TestContractCache_ReportsMissingCRD checks the path that keeps one image
-// deployable to a Service Cluster where only some providers are installed: an
+// deployable to a management cluster where only some providers are installed: an
 // absent CRD must be distinguishable from a real failure, so the caller can
-// disable that translator instead of failing the cluster.
+// report the unavailable provider independently of cluster readiness.
 func TestContractCache_ReportsMissingCRD(t *testing.T) {
 	c := capi.NewContractCache(k8s)
 

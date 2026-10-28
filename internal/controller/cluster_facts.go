@@ -36,14 +36,12 @@ import (
 // clusterFacts is the subset of the owning CAPI Cluster the reconciler needs,
 // read through unstructured paths.
 //
-// The Cluster is deliberately NOT read through typed clusterv1 structs: the
-// Service Clusters this deploys to run their own CAPI core generation (v1.12
-// on integ today, serving v1beta1 and v1beta2), and a typed Get pins this
-// binary to whichever version its module compiles against, failing at
-// runtime with no compile-time warning the day the core stops serving it.
-// Every field below lives at the same path in both API versions, so reading
-// whichever version the server actually serves — resolved once from the REST
-// mapper — is safe on any core.
+// The Cluster is deliberately NOT read through typed clusterv1 structs: management
+// clusters can serve different CAPI core versions, and a typed Get pins this binary
+// to whichever version its module compiles against. It would fail at runtime if
+// the core stopped serving that version. Every field below lives at the same path
+// in v1beta1 and v1beta2, so the reader uses the served version resolved from the
+// REST mapper.
 type clusterFacts struct {
 	Name      string
 	Namespace string

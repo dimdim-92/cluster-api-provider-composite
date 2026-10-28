@@ -30,23 +30,23 @@ import (
 	infrav1 "github.com/numspot/cluster-api-provider-composite/api/v1beta2"
 )
 
-func testOperatorProviderAddons(t *testing.T, installation *envtest.Environment, c client.Client, binary string) {
-	ns := operatorNamespace(t, c, "addons")
+func testOperatorProviderAttachments(t *testing.T, installation *envtest.Environment, c client.Client, binary string) {
+	ns := operatorNamespace(t, c, "attachments")
 	credentials := operatorCredentials(t, installation, c, ns)
 	template := regionalProfileDefinition()
 	template.Spec.CredentialsNamePaths = []infrav1.ProfileJSONPointer{"/identityRef/name"}
 	createRegionalProfile(t, c, template)
-	cluster, cc := runtimeClusterWithSpec(t, c, ns, "addon-contract", "addons", infrav1.CompositeClusterSpec{
+	cluster, cc := runtimeClusterWithSpec(t, c, ns, "attachment-contract", "attachments", infrav1.CompositeClusterSpec{
 		ControlPlaneEndpoint: infrav1.APIEndpoint{Host: "192.0.2.50", Port: 6443},
 	})
-	startOperator(t, binary, credentials, ns, "--watch-filter=addons")
+	startOperator(t, binary, credentials, ns, "--watch-filter=attachments")
 	require.Eventually(t, func() bool {
 		current := &infrav1.CompositeCluster{}
 		return c.Get(t.Context(), client.ObjectKeyFromObject(cc), current) == nil && current.Status.Initialization.Provisioned != nil &&
 			*current.Status.Initialization.Provisioned
 	}, 10*time.Second, 100*time.Millisecond)
 	p := &infrav1.CompositeProvider{
-		ObjectMeta: metav1.ObjectMeta{Name: "supplemental-paris-provider", Namespace: ns},
+		ObjectMeta: metav1.ObjectMeta{Name: "paris-provider", Namespace: ns},
 		Spec: infrav1.CompositeProviderSpec{
 			ClusterRef: infrav1.CompositeClusterReference{Name: cc.Name}, TemplateRef: infrav1.CompositeProviderReference{Name: template.Name},
 			CredentialsRef: infrav1.ProviderSecretReference{Name: "tenant-credentials"},

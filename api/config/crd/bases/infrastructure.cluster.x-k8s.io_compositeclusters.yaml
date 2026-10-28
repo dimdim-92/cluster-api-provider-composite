@@ -209,8 +209,8 @@ spec:
                     controlPlane:
                       description: |-
                         controlPlane determines if this failure domain is suitable for control
-                        plane machines. Always false here: control planes are hosted by Kamaji on
-                        the Service Cluster, never on Tenant Cluster infrastructure.
+                        plane machines. Always false here: hosted control planes do not use the
+                        workload infrastructure's failure domains.
                       type: boolean
                     name:
                       description: name is the provider's own name for the failure

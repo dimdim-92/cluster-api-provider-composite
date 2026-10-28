@@ -194,7 +194,7 @@ func TestCompositeClusterReconciler_DoesNotDeleteForeignObjects(t *testing.T) {
 				cluster := newCAPICluster(t, ns, "expected")
 				cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
 				template := newRegionalProfile(t)
-				provider := addonProvider(t, cc, template.Name, "fake")
+				provider := createProviderAttachment(t, cc, template.Name, "fake")
 				otherCluster := newCAPICluster(t, ns, "other")
 				setEndpoint(t, cc, cluster, "203.0.113.10", 6443)
 
@@ -242,7 +242,7 @@ func TestCompositeClusterReconciler_DoesNotDeleteForeignObjects(t *testing.T) {
 					cc = current
 					requireCondition(
 						t,
-						getAddon(t, provider).Status.Conditions,
+						getProviderAttachment(t, provider).Status.Conditions,
 						infrav1.ReadyCondition,
 						metav1.ConditionFalse,
 						reason,
@@ -365,7 +365,7 @@ func TestCompositeClusterReconciler_DeleteDoesNotTargetReplacement(t *testing.T)
 			r := newClusterReconciler()
 			cluster := newCAPICluster(t, ns, "replacement")
 			cc := newCompositeCluster(t, cluster, infrav1.CompositeClusterSpec{})
-			addonProvider(t, cc, newRegionalProfile(t).Name, "fake")
+			createProviderAttachment(t, cc, newRegionalProfile(t).Name, "fake")
 			setEndpoint(t, cc, cluster, "203.0.113.10", 6443)
 			_, cc, err := reconcileCluster(t, r, cc)
 			require.NoError(t, err)
@@ -431,7 +431,7 @@ func TestCompositeClusterReconciler_MissingAPIIsNotMissingChild(t *testing.T) {
 	ns := newNamespace(t)
 	r := newClusterReconciler()
 	cc := newCompositeCluster(t, newCAPICluster(t, ns, "missing-api"), infrav1.CompositeClusterSpec{})
-	addonProvider(t, cc, newRegionalProfile(t).Name, "fake")
+	createProviderAttachment(t, cc, newRegionalProfile(t).Name, "fake")
 	_, cc, err := reconcileCluster(t, r, cc)
 	require.NoError(t, err)
 	r.Client = &ownershipRaceClient{Client: k8s, getError: func(obj client.Object) error {

@@ -1,7 +1,7 @@
 # Usage
 
 Composite combines provider-native infrastructure behind one CAPI Cluster. Start
-with [installation](operations.md), an empty cluster and [provider addons](#provider-addons).
+with [installation](operations.md), an empty cluster and [provider attachments](#create-a-cluster-attachment).
 Provider attachments use namespaced `CompositeProvider` resources exclusively.
 The examples need compatible native providers, credentials, a hosted
 control plane and networking; they are not a complete cloud deployment.
@@ -40,7 +40,7 @@ new named templates and a new profile for a changed revision.
 | `provider` | Yes | Logical provider identifier; a DNS label of at most 63 characters |
 | `account`, `region` | Yes | Administrative identities, each 1–63 characters |
 | `credentialsRef` | No | Immutable namespace-local Secret `name` and 1–8 `namePaths` receiving that name in the native infrastructure spec |
-| `credentialsNamePaths` | No | Protected native Secret-name paths for addon attachments; the namespaced provider supplies the name instead of fixed template credentials |
+| `credentialsNamePaths` | No | Protected native Secret-name paths; the namespaced provider supplies the name instead of fixed template credentials |
 | `infraClusterKind.apiGroup`, `infraClusterKind.kind` | Yes | Native InfraCluster GroupKind; excludes Composite resource kinds |
 | `zones` | No | Up to 16 distinct native failure-domain names |
 | `infrastructureTemplateRef` | Yes | Explicit `apiVersion`, `kind`, `namespace`, `name` of a native InfraClusterTemplate |
@@ -96,9 +96,9 @@ according to native-provider behavior without changing profile/source pins.
 
 ### CompositeProvider
 
-`CompositeProvider` is namespaced (`kubectl get cprov -n <space>`). Create one
-directly or let MSC create it per supplemental provider addon; several native worker child addons
-may consume its bootstrap output. Provider names are DNS labels up to 63 characters.
+`CompositeProvider` is namespaced (`kubectl get cprov -n <namespace>`). Create one
+per provider attachment; several native worker pools may consume its bootstrap
+output. Provider names are DNS labels up to 63 characters.
 
 | Field under `spec` | Required | Meaning |
 |---|---|---|
@@ -113,7 +113,7 @@ UID/generation changes block reconciliation rather than transparently rebinding.
 `status.conditions` and `observedGeneration` report current attachment health;
 `status.infrastructureRef` and `bootstrapTemplateRef` identify generated resources.
 `status.initialization.provisioned` latches success independently of current Ready.
-Worker availability belongs to MSC child addons and CAPI MachineDeployments.
+Worker availability is reported by native CAPI MachineDeployments.
 
 ### CompositeCluster
 
@@ -287,8 +287,8 @@ native API groups need explicit RBAC.
 
 ## Start before provider attachments
 
-To bootstrap a hosted control plane before its provider/node-pool addons, create
-the owning CAPI Cluster with its Composite infrastructure reference and use:
+To bootstrap a hosted control plane before provider attachments and worker pools,
+create the owning CAPI Cluster with its Composite infrastructure reference and use:
 
 ```yaml
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
@@ -302,8 +302,8 @@ spec: {}
 After CAPI establishes ownership, Composite reports `Ready=True` and
 `status.initialization.provisioned=true` without native children, bootstrap
 templates or an endpoint. Pause, ownership and durable binding checks still apply.
-This reports infrastructure readiness only; the hosted control-plane provider and
-management-service readiness checks still determine whether the space is usable.
+This reports infrastructure readiness only; check the hosted control-plane
+provider and CAPI Cluster status separately before treating the cluster as usable.
 
 Provision the provider/region Secret and profile later, then create a
 CompositeProvider referencing that CompositeCluster. Publishing a profile alone
@@ -455,233 +455,6 @@ Supply version, replicas and the native MachineTemplate separately. A pool may
 instead use its own bootstrap template. Composite does not create or roll workers;
 its Ready condition is not evidence of a successful worker join. Provide compatible
 node initialization, CNI, CSI and cloud-controller configuration for your stack.
-
-## Provider addons
-
-See the [complete hosted-cluster and provider-pool example](examples/provider-addons.md)
-for prerequisites, ordered application, credentials, two Outscale pools, an optional
-OpenStack pool, observation and cleanup.
-
-For the addon-driven flow, start the hosted control plane using
-[instance-empty.yaml](../local/managed-service/instance-empty.yaml). Its
-CompositeCluster becomes infrastructure-ready without native children or an endpoint.
-Provider readiness and worker availability are separate observations.
-
-[local/managed-service/provider-addons/](../local/managed-service/provider-addons/)
-contains three reusable provider templates, Outscale/OpenStack provider MSClasses,
-an Outscale supplemental request and its expected provider output. Outscale creates
-one CompositeProvider and declares two native worker child addons (`small`, `medium`);
-OpenStack declares one worker addon. These reuse the existing provider-specific
-pool classes, without a Composite worker controller. MSC must support expansion of
-supplemental classes' `addonDefinitions`. Render with your MSC version before live
-use; Composite tests its own APIs and static wiring, not MSC's execution engine.
-
-After installing the ordinary service/management definitions below, apply native
-sources and templates on MSC's service cluster, then addon classes/requests on its
-management cluster:
-
-```sh
-kubectl --kubeconfig "$SERVICE_KUBECONFIG" apply \
-  -f local/managed-service/service-cluster/provider-templates.yaml \
-  -f local/managed-service/provider-addons/templates.yaml
-kubectl --kubeconfig "$MSC_KUBECONFIG" apply \
-  -f local/managed-service/management-cluster/outscale-nodepool-class.yaml \
-  -f local/managed-service/management-cluster/openstack-nodepool-class.yaml \
-  -f local/managed-service/provider-addons/outscale-class.yaml \
-  -f local/managed-service/provider-addons/openstack-class.yaml
-kubectl --kubeconfig "$MSC_KUBECONFIG" apply -f local/managed-service/instance-empty.yaml
-# Supply namespace-local credentials and a Kubernetes-ready worker image first.
-kubectl --kubeconfig "$MSC_KUBECONFIG" apply \
-  -f local/managed-service/provider-addons/outscale-addon.yaml
-kubectl --kubeconfig "$SERVICE_KUBECONFIG" get compositecluster,compositeprovider \
-  -n kubernetes-cluster-empty-demo
-```
-
-`nodePoolId` must equal the supplemental addon's name. Supply the observed CAPI
-cluster/infrastructure names and coordinate Kubernetes versions. Generated bootstrap
-names are `<infrastructureName>-supplemental-<addon>-provider`; each native pool
-references that output. [provider.yaml](../local/managed-service/provider-addons/provider.yaml) is reference output, not a manifest to apply
-over MSC ownership. Additional OpenStack regions need an explicit immutable native
-name while retaining a canonical attachment.
-
-Provider addon deletion must drain all MSC worker children first. Composite then
-confirms infrastructure deletion before deleting bootstrap and releasing protection.
-Source/template loss does not prevent cleanup. Do not remove pins or finalizers to
-force progress.
-
-## Managed-service manifests
-
-[local/managed-service](../local/managed-service/) contains static YAML definitions
-for the `cloud-organisation/managed-service-controller` integration. The MSClass
-creates a **CAPI `v1beta2.Cluster`** with a topology reference:
-
-```text
-ManagedServiceInstance/demo -> ManagedServiceClass/kubernetes-composite-v1
-  -> Cluster/cluster-demo -> ClusterClass/composite-v1
-       infrastructure.templateRef -> CompositeClusterTemplate/composite-v1
-         -> CompositeCluster/cluster-demo-infra
-       controlPlane.templateRef -> KamajiControlPlaneTemplate/composite-kamaji-v1
-         -> KamajiControlPlane
-```
-
-MSC patches only hosted-control-plane topology variables; ClusterClass applies
-those to Kamaji. There is no provider topology input or infrastructure provider
-patch. CAPI stamps an empty CompositeCluster and establishes ownership. Its
-infrastructure naming template is `{{ .cluster.name }}-infra`. Standalone
-CompositeProvider resources or MSC provider addons attach regions afterward.
-
-### Files and placement
-
-MSC calls the cluster hosting its API objects the **management cluster**, and its
-configured target the **service cluster**. In this example, the service cluster
-is the CAPI management cluster; the tenant/workload cluster is a third API server.
-The two management roles may share a cluster in a local setup.
-
-| Files under `local/managed-service/` | Apply to | Purpose |
-|---|---|---|
-| [provider-templates.yaml](../local/managed-service/service-cluster/provider-templates.yaml), [providers.yaml](../local/managed-service/service-cluster/providers.yaml) | Service cluster | Native source templates and three immutable profile references |
-| [namespace.yaml](../local/managed-service/service-cluster/namespace.yaml), [ClusterClass](../local/managed-service/service-cluster/cluster-class.yaml), [CompositeClusterTemplate](../local/managed-service/service-cluster/composite-cluster-template.yaml), [Kamaji template](../local/managed-service/service-cluster/kamaji-control-plane-template.yaml) | Service cluster | Namespace, ClusterClass and infrastructure/control-plane templates |
-| [msc-rbac.yaml](../local/managed-service/service-cluster/msc-rbac.yaml) | Service cluster | Supplemental role for MSC's target-cluster identity; bind for your installation |
-| [namespace.yaml](../local/managed-service/management-cluster/namespace.yaml), [cluster MSClass](../local/managed-service/management-cluster/cluster-class.yaml), [overlay.yaml](../local/managed-service/management-cluster/overlay.yaml) | MSC management cluster | Cluster MSClass and environment overlay |
-| [OpenStack pool class](../local/managed-service/management-cluster/openstack-nodepool-class.yaml), [Outscale pool class](../local/managed-service/management-cluster/outscale-nodepool-class.yaml) | MSC management cluster | Reusable addon definitions that reference Composite-generated bootstrap templates |
-| [instance.yaml](../local/managed-service/instance.yaml) | MSC management cluster | Hosted cluster request; attach regions separately |
-| [providers.yaml](../local/managed-service/providers.yaml) | Service cluster | Three standalone CompositeProvider attachments for demo |
-| [instance-empty.yaml](../local/managed-service/instance-empty.yaml) | MSC management cluster | Hosted-control-plane-first request without provider configuration |
-| [Paris pool](../local/managed-service/nodepool-ovh-paris.yaml), [Varsovie pool](../local/managed-service/nodepool-ovh-varsovie.yaml), [Outscale pool](../local/managed-service/nodepool-osc-paris.yaml) | MSC management cluster | One supplemental native worker pool per region |
-| [cluster.yaml](../local/managed-service/cluster.yaml), [composite-cluster.yaml](../local/managed-service/composite-cluster.yaml) | Reference output | Expected Cluster and infrastructure spec; do not apply over MSC/CAPI-owned objects |
-
-The three attachments and resulting infrastructure objects are:
-
-| Attachment | CompositeProviderTemplate | Native region | Native object in `kubernetes-cluster-demo` |
-|---|---|---|---|
-| `ovh-paris` | `ovh-paris-account-a-v1` | `EU-WEST-PAR` | `OpenStackCluster/cluster-demo-infra` |
-| `ovh-varsovie` | `ovh-varsovie-account-a-v1` | `WAW1` | `OpenStackCluster/cluster-demo-ovh-varsovie-infra` |
-| `osc-paris` | `osc-paris-account-a-v1` | `eu-west-2` | `OscCluster/cluster-demo-infra` |
-
-Attachment names are the caller's region identifiers; native region names and
-credential references are in the selected templates. All three provider resources
-have an explicit immutable `infraClusterName`. `ovh-paris` and `osc-paris` both use
-`cluster-demo-infra`, the canonical name for their respective GroupKinds. Varsovie
-uses its own regional name; Paris remains CAPO's canonical context. Provider resources
-select their template and cluster explicitly; no region/account selection is inferred
-from an attachment name.
-
-### Apply the definitions and instance
-
-Install MSC, CAPI with ClusterTopology enabled, kubeadm bootstrap, Composite,
-CAPOSC, CAPO, Kamaji and its CAPI provider first. These manifests target the
-Kamaji provider's `v1alpha1` API used by the existing platform templates. Match
-the installed version before applying. Configure Kamaji's Composite endpoint
-support as described in [operations](operations.md#managed-service-integration).
-
-Edit source-template Secret references, the environment overlay's control-plane network
-exposure, and each pool's image/keypair/network/security-group inputs. The profiles
-assume Kubernetes-ready images with compatible kubeadm, kubelet and containerd.
-Provide your CNI and cross-region routing, including worker access to the API and
-Konnectivity endpoint. Bootstrap sets native provider IDs without enabling a
-cluster-wide external cloud node controller.
-
-```sh
-MSC_KUBECONFIG=/path/to/msc-management.yaml
-SERVICE_KUBECONFIG=/path/to/service-cluster.yaml
-
-kubectl --kubeconfig "$SERVICE_KUBECONFIG" apply \
-  -f local/managed-service/service-cluster/namespace.yaml \
-  -f local/managed-service/service-cluster/provider-templates.yaml \
-  -f local/managed-service/service-cluster/providers.yaml
-kubectl --kubeconfig "$SERVICE_KUBECONFIG" wait --for=condition=ConfigurationValid=True \
-  compositeprovidertemplate/ovh-paris-account-a-v1 \
-  compositeprovidertemplate/ovh-varsovie-account-a-v1 \
-  compositeprovidertemplate/osc-paris-account-a-v1 --timeout=60s
-kubectl --kubeconfig "$SERVICE_KUBECONFIG" apply \
-  -f local/managed-service/service-cluster/composite-cluster-template.yaml \
-  -f local/managed-service/service-cluster/kamaji-control-plane-template.yaml \
-  -f local/managed-service/service-cluster/cluster-class.yaml
-kubectl --kubeconfig "$SERVICE_KUBECONFIG" wait --for=condition=Ready=True \
-  clusterclass/composite-v1 -n composite-templates --timeout=60s
-kubectl --kubeconfig "$MSC_KUBECONFIG" apply \
-  -f local/managed-service/management-cluster/namespace.yaml \
-  -f local/managed-service/management-cluster/cluster-class.yaml \
-  -f local/managed-service/management-cluster/openstack-nodepool-class.yaml \
-  -f local/managed-service/management-cluster/outscale-nodepool-class.yaml \
-  -f local/managed-service/management-cluster/overlay.yaml
-kubectl --kubeconfig "$MSC_KUBECONFIG" apply -f local/managed-service/instance.yaml
-```
-
-MSC creates the target namespace `kubernetes-cluster-demo`. Supply the three
-native credential Secrets there through your secret-management mechanism; profile
-references do not copy them. The source MSI namespace `cloud-kubernetes` is not
-the target namespace. Keep MSI names at most 44 characters so the target namespace
-fits Kubernetes' limit. The bounded `clusterId` keeps CAPI infrastructure naming
-deterministic instead of triggering its random-suffix truncation.
-
-```sh
-kubectl --kubeconfig "$SERVICE_KUBECONFIG" get cluster,compositecluster \
-  -n kubernetes-cluster-demo
-kubectl --kubeconfig "$MSC_KUBECONFIG" wait --for=condition=Ready=True \
-  managedserviceinstance/demo -n cloud-kubernetes --timeout=15m
-kubectl --kubeconfig "$SERVICE_KUBECONFIG" apply -f local/managed-service/providers.yaml
-kubectl --kubeconfig "$SERVICE_KUBECONFIG" wait --for=condition=Ready=True \
-  compositeprovider/ovh-paris compositeprovider/ovh-varsovie \
-  compositeprovider/osc-paris -n kubernetes-cluster-demo --timeout=15m
-kubectl --kubeconfig "$MSC_KUBECONFIG" apply \
-  -f local/managed-service/nodepool-ovh-paris.yaml \
-  -f local/managed-service/nodepool-ovh-varsovie.yaml \
-  -f local/managed-service/nodepool-osc-paris.yaml
-```
-
-### Worker references and lifecycle
-
-For a hosted-control-plane-first flow, use [instance-empty.yaml](../local/managed-service/instance-empty.yaml) instead of
-[instance.yaml](../local/managed-service/instance.yaml); profile provisioning can then follow initial MSI readiness.
-Neither the MSC class nor ClusterClass accepts provider topology inputs. Provision
-native provider CRDs and credential Secrets before creating CompositeProviders,
-rather than to make empty Composite infrastructure Ready.
-
-The `*.draft.yaml` Outscale provider/node-pool class and supplemental request are
-separate HCP-space design drafts. They select credentials through
-`credentialsSecretName` and declare three worker VM types. Their referenced HCP
-space/control-plane classes are external to this bundle; MSC at `b852d5e` does not expand a
-supplemental class's `addonDefinitions`. Empty-infrastructure support removes the
-initial provider dependency, but does not add that MSC graph behavior. The draft
-creates a CompositeProvider and requires an administrator-published provider
-template, not profile write permissions for MSC.
-
-Pool requests are `ManagedServiceSupplementalAddon` CRs. Each `classRef` selects
-one of the two reusable ManagedServiceClass definitions installed above. These
-render only a native MachineTemplate and a standalone MachineDeployment. Their
-bootstrap references are `cluster-demo-infra-ovh-paris`,
-`cluster-demo-infra-ovh-varsovie` and `cluster-demo-infra-osc-paris`. These point to
-Composite-generated templates; addon definitions should not create competing KCTs.
-`nodePoolId` must equal the supplemental addon's name, matching MSC's
-`supplemental-<addon-name>-` resource prefix.
-
-The parent MSI readiness checks current infrastructure, control-plane availability
-and API reachability. Worker availability is checked on each supplemental addon,
-so a pool cannot block its own creation or recovery through the parent's readiness
-gate. The caller supplies each pool's `clusterName`, `clusterVersion` and attachment;
-the cluster MSClass also exports the observed infrastructure name for callers.
-Coordinate pool version changes with control-plane upgrades. Native MachineTemplate
-specs are immutable: use a new pool/template revision for image or sizing changes.
-
-Varsovie's worker template explicitly selects its identity, network, subnet and
-per-port security groups. Its attachment name selects bootstrap, not CAPO's native
-lookup context. See [regional infrastructure](#same-provider-regional-infrastructure)
-for the remaining canonical-context dependencies.
-
-Edit [providers.yaml](../local/managed-service/providers.yaml) for allowed overrides or add another CompositeProvider.
-Preserve existing provider names, references and native names. For another instance,
-update the target namespace, cluster references, cluster-specific Outscale names,
-Varsovie's native name and pool inputs. Delete standalone provider resources only
-after their worker consumers are gone; provider retirement waits for consumers.
-
-Delete the MSI through MSC. Its adjacent-graph teardown drains supplemental pools
-before deleting the Cluster. CAPI then deletes its control plane/infrastructure;
-Composite performs native infrastructure and bootstrap cleanup. The class's
-blocking-resource list keeps the namespace and credentials available during that
-cleanup. Keep the cluster MSClass, addon definitions, templates, profiles and controllers until all instances
-are gone. Remove provider consumers before deleting their profiles; infrastructure
-templates no longer reference profiles.
 
 ## Observe and troubleshoot
 

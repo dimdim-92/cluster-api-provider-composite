@@ -111,8 +111,8 @@ type CompositeProviderStatus struct {
 // +kubebuilder:printcolumn:name="Template",type=string,JSONPath=".spec.templateRef.name"
 // +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=".status.conditions[?(@.type=='Ready')].status"
 
-// CompositeProvider binds an MSC supplemental addon to provider-specific infrastructure and bootstrap.
-// The CompositeCluster remains the controller owner of generated children; MSC and CAPI own workers.
+// CompositeProvider attaches provider-specific infrastructure and bootstrap to a CompositeCluster.
+// The CompositeCluster owns generated children; CAPI and native providers manage workers.
 type CompositeProvider struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata identifies the namespaced provider attachment.

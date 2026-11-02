@@ -4,6 +4,14 @@ Follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report bugs with a minimal
 reproduction, provider versions and relevant redacted observations. Send security
 reports privately using [SECURITY.md](SECURITY.md).
 
+Publish only content approved for public release. Do not include C1+ internal
+information, customer data, credentials, workstation paths or real production
+configuration in source, examples, reports or screenshots. Use synthetic examples and review
+context manually; a passing secret scan is not classification approval. Approved
+public maintainer contacts, project ownership and required legal notices may remain.
+See [source publication](SECURITY.md#source-publication) for local-state and history
+boundaries.
+
 Discuss significant behavior changes in an issue or PR. Keep the implementation
 focused, explain the trade-offs, and update [design](docs/design.md) or the relevant
 usage guide. New providers should use native payloads and CRDs, not Go translators.

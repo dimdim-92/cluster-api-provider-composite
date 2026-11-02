@@ -87,6 +87,7 @@ $(GITLEAKS): hack/tools.env
 	GOBIN="$(dir $(GITLEAKS))" $(GO) install github.com/zricethezav/gitleaks/v8@$(GITLEAKS_VERSION)
 
 verify-hygiene: $(ACTIONLINT) $(GITLEAKS)
+	GITLEAKS="$(GITLEAKS)" $(GO) test $(GOFLAGS) -race -timeout 120s ./hack -run '^TestHygiene'
 	ACTIONLINT="$(ACTIONLINT)" GITLEAKS="$(GITLEAKS)" bash hack/verify-hygiene.sh
 
 $(GOVULNCHECK): hack/tools.env

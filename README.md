@@ -83,7 +83,7 @@ published images or production support.
 
 ## Build, publish and install
 
-GitHub automation follows the longue-vue CI/security/release workflow layout.
+GitHub automation separates CI, security checks and gated release publication.
 See [CI and checks](docs/development.md#github-automation) and
 [release setup](docs/operations.md#automated-releases) for App secrets, required
 checks, GHCR permissions and the coupled image/chart/clusterctl release version.

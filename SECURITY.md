@@ -15,6 +15,23 @@ Security fixes, when available, are published as new versions; existing release
 tags are not moved. Backports to development snapshots or older unreleased
 schemas are not promised. Include the exact affected tag or commit in reports.
 
+## Source publication
+
+Keep C1+ internal/confidential material, unapproved personal data, credentials and
+real production configuration out of source, examples, diagnostics and attachments.
+Approved public maintainer contacts and required legal/provenance notices are not
+removed by this policy. Use synthetic accounts, reserved example domains and
+portable paths; Secret names and environment-variable references must not contain
+credential values.
+
+`make verify-hygiene` checks the current deliverable, not Git history, ignored
+local state or remote artifacts. Review classification and deployment details
+manually. Do not publish a workspace copy: `.git/`, `.tools/`, IDE state and local
+build outputs can retain private configuration, authentication and earlier content.
+A source cleanup does not sanitize other refs, reflogs, releases or existing copies.
+If a credential is found, remove the local/source copy and revoke or rotate it;
+deletion alone does not invalidate it. Coordinate any history rewrite separately.
+
 ## Trust boundaries
 
 - Restrict catalog, source-template and consumer writes. All namespaces may reference profiles;

@@ -21,16 +21,20 @@ make verify-hygiene
 
 `make verify` checks tools, Go headers, API dependency isolation, generated output,
 contract labels, both-module lint, API lint, race-enabled tests, packaging renders
-and vulnerabilities. `verify-hygiene` checks workflow syntax and scans deliverable
-source for secrets/private endpoints. GitHub Actions splits these checks into CI
-and Security workflows rather than hiding test results behind a vulnerability scan.
+and vulnerabilities. `verify-hygiene` checks workflow syntax, rejects tracked private
+credential/config files, tests the hygiene policy and scans deliverable source for
+secrets, private endpoints and personal workstation paths. Classification and
+production details still need contextual review; see
+[source publication](../SECURITY.md#source-publication). GitHub Actions splits these
+checks into CI and Security workflows rather than hiding test results behind a
+vulnerability scan.
 
 ## GitHub automation
 
-The CI layout follows Numspot's longue-vue repository, adapted to one operator,
-the separate API module and native provider packaging. Release publication uses
-reusable verification followed by promotion of the same tested artifacts. There
-is no UI bundle, deployment step or private workflow/chart dependency.
+CI verifies the operator, the separate API module and native provider packaging.
+Release publication uses reusable verification followed by promotion of the same
+tested artifacts. There is no UI bundle, deployment step or private workflow/chart
+dependency.
 
 | Workflow | Purpose |
 |---|---|
@@ -45,8 +49,8 @@ Actions are pinned to immutable SHAs. The shared [tool setup](../.github/actions
 reads [tool pins](../hack/tools.env); Go caching covers both module checksums.
 CI checks generated output in scratch space and never repairs the working source.
 `make test COVERPROFILE=coverage.out` writes separate root/API coverage profiles,
-which CI uploads even after a test failure. Docker jobs use the existing operator
-Dockerfile, not longue-vue's frontend/database build.
+which CI uploads even after a test failure. Docker jobs build and smoke-test the
+operator image.
 
 The `DCO` check runs on PR creation, updates, reopen and edits for every target
 branch, using read-only permissions and complete Git history. Shallow repositories

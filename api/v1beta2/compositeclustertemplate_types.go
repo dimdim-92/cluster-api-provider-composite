@@ -64,9 +64,8 @@ type CompositeClusterTemplateSpec struct {
 
 // CompositeClusterTemplate is the Schema for the compositeclustertemplates API.
 //
-// It exists so a ClusterClass can reference us as its infrastructure template.
-// Adopting capi-composite in the existing Numspot ClusterClass is a one-line swap
-// of OscClusterTemplate for CompositeClusterTemplate.
+// A ClusterClass can reference it as its infrastructure template to create
+// CompositeClusters with shared bootstrap and endpoint configuration.
 type CompositeClusterTemplate struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata identifies the template.

@@ -6,9 +6,9 @@
 
 ## Why this project exists
 
-A Cluster API Cluster has one `infrastructureRef`. The original Numspot use case
-needed one workload cluster with infrastructure from multiple native providers,
-initially Outscale and OpenStack, behind a hosted control plane such as Kamaji.
+A Cluster API Cluster has one `infrastructureRef`. Composite supports one workload
+cluster with infrastructure from multiple native providers, including Outscale
+and OpenStack, behind a hosted control plane such as Kamaji.
 
 The native providers already implement networks, machines and cloud lifecycle.
 Reimplementing those APIs in another provider would duplicate their responsibilities

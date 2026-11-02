@@ -5,13 +5,15 @@ set -euo pipefail
 # excluded path is a source-delivery error, even if the scanner would skip it.
 if [ -e .git ]; then
   git ls-files -z -- '.tools/**' '.idea/**' '.vscode/**' '.claude/**' '.opencode/**' \
-    'bin/**' 'out/**' 'helm/charts/**' '.env' '.env.*' 'mgmt.yaml' \
-    'tests/integration/kubeconfig' 'tests/integration/test-results/**' 'capi-composite-controller' |
+    'bin/**' 'out/**' 'helm/charts/**' '.env' '.env.*' '**/.env' '**/.env.*' 'mgmt.yaml' \
+    'kubeconfig' '**/kubeconfig' '*.kubeconfig' '.kube/**' '**/.kube/**' \
+    '*.key' '*.pem' '*.p12' '*.pfx' '*.tfstate' '*.tfstate.*' '*.tfvars' '*.tfvars.json' \
+    'tests/integration/test-results/**' 'capi-composite-controller' |
     while IFS= read -r -d '' path; do
       # A deletion in the working tree is already absent from the deliverable;
       # verification must not require staging it merely to inspect the source.
       if [ -e "$path" ] || [ -L "$path" ]; then
-        printf 'Development-only path is tracked and must not be delivered: %s\n' "$path" >&2
+        printf 'Private or development-only path is tracked and must not be delivered: %s\n' "$path" >&2
         exit 1
       fi
     done

@@ -20,10 +20,9 @@ import "time"
 
 // Operator is the top-level configuration.
 //
-// Probe and metrics ports follow the Numspot operator convention: /ping and
-// /ready on 2112, metrics on 5555. These are deliberately NOT controller-runtime
-// defaults (/healthz, /readyz, :8081, :8080); mismatching them against the Helm
-// chart's probes is the single most common bootstrap bug in these repos.
+// Probes use /ping and /ready on 2112; metrics use 5555. These differ from
+// controller-runtime defaults and must remain consistent with the installation
+// templates.
 type Operator struct {
 	// InternalPort serves the liveness and readiness probes.
 	InternalPort string `env:"INTERNAL_PORT" envDefault:"2112"`

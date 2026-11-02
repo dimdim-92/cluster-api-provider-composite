@@ -12,7 +12,19 @@
 /.vscode/
 /.claude/
 /.opencode/
-/.env
-/.env.*
+# Private configuration and credential material at any depth.
+.env
+.env.*
+kubeconfig
+*.kubeconfig
+.kube/
+*.key
+*.pem
+*.p12
+*.pfx
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
 coverage.out
 *.sarif

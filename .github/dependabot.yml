@@ -1,4 +1,4 @@
-# Match longue-vue's security-update policy; scheduled version PRs are disabled.
+# Enable security updates; scheduled version PRs are disabled.
 version: 2
 updates:
   - package-ecosystem: gomod

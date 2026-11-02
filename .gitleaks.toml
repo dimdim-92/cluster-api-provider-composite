@@ -27,4 +27,11 @@ id = "generic-api-key"
 [[rules]]
 id = "private-infrastructure-reference"
 description = "Private infrastructure endpoint must not enter the public source deliverable"
-regex = '''(?i)(?:[a-z0-9-]+\.)*(?:numspot\.internal|tooling\.[a-z0-9.-]+\.numspot\.cloud)'''
+regex = '''(?i)(?:[a-z0-9-]+\.)+(?:internal|corp)(?:[^\w.-]|$)|(?:[a-z0-9-]+\.)*tooling\.(?:[a-z0-9-]+\.)+cloud(?:[^\w.-]|$)'''
+
+[[rules]]
+id = "personal-workstation-path"
+description = "Use portable paths instead of personal workstation home directories"
+# Extract the username so the default filesystem-path allowlist cannot hide it.
+regex = '''(?:/Users/|/home/)([a-zA-Z0-9][a-zA-Z0-9._-]*)'''
+secretGroup = 1

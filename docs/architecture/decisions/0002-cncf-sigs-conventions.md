@@ -97,10 +97,10 @@ repository.
 
 ### Verification
 
-The [CI workflow](../../../.github/workflows/verify.yml) follows the longue-vue
-workflow layout with independent Go, Helm and Docker checks on PRs, main pushes
-and manual dispatch. It preserves both-module checks, scratch generated-output
-verification, race/envtest coverage and the local image smoke test. Separate
+The [CI workflow](../../../.github/workflows/verify.yml) runs independent Go,
+Helm and Docker checks on PRs, main pushes and manual dispatch. It preserves
+both-module checks, scratch generated-output verification, race/envtest coverage
+and the local image smoke test. Separate
 [commit checks](../../../.github/workflows/commit-lint.yml) and
 [Security scans](../../../.github/workflows/security.yml) retain read-only PR trust
 boundaries and immutable action/tool pins.

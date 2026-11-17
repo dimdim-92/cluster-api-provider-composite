@@ -1,0 +1,110 @@
+# Real CAPD workload: Composite owns the native DockerCluster and worker bootstrap.
+# Install quickstart-templates.yaml first. hack/quickstart.sh publishes CAPD's actual
+# load-balancer endpoint on CompositeCluster once; neither source templates nor pins change.
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  name: composite-docker
+  namespace: composite-quickstart
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks: [192.168.0.0/16]
+    services:
+      cidrBlocks: [10.96.0.0/12]
+  infrastructureRef:
+    apiGroup: infrastructure.cluster.x-k8s.io
+    kind: CompositeCluster
+    name: composite-docker-infra
+  controlPlaneRef:
+    apiGroup: controlplane.cluster.x-k8s.io
+    kind: KubeadmControlPlane
+    name: composite-docker-control-plane
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeCluster
+metadata:
+  name: composite-docker-infra
+  namespace: composite-quickstart
+spec: {}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProvider
+metadata:
+  name: docker
+  namespace: composite-quickstart
+spec:
+  clusterRef: {name: composite-docker-infra}
+  templateRef: {name: docker-local-v1}
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+kind: KubeadmControlPlane
+metadata:
+  name: composite-docker-control-plane
+  namespace: composite-quickstart
+spec:
+  replicas: 1
+  version: v1.34.0
+  machineTemplate:
+    spec:
+      infrastructureRef:
+        apiGroup: infrastructure.cluster.x-k8s.io
+        kind: DockerMachineTemplate
+        name: composite-docker-control-plane
+  kubeadmConfigSpec:
+    clusterConfiguration:
+      apiServer:
+        certSANs: [localhost, 127.0.0.1, 0.0.0.0]
+    initConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          - name: eviction-hard
+            value: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
+    joinConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          - name: eviction-hard
+            value: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: DockerMachineTemplate
+metadata:
+  name: composite-docker-control-plane
+  namespace: composite-quickstart
+spec:
+  template:
+    spec:
+      customImage: kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: DockerMachineTemplate
+metadata:
+  name: composite-docker-workers
+  namespace: composite-quickstart
+spec:
+  template:
+    spec:
+      customImage: kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: MachineDeployment
+metadata:
+  name: composite-docker-workers
+  namespace: composite-quickstart
+spec:
+  clusterName: composite-docker
+  replicas: 1
+  selector: {}
+  template:
+    spec:
+      clusterName: composite-docker
+      version: v1.34.0
+      bootstrap:
+        configRef:
+          apiGroup: bootstrap.cluster.x-k8s.io
+          kind: KubeadmConfigTemplate
+          name: composite-docker-infra-docker
+      infrastructureRef:
+        apiGroup: infrastructure.cluster.x-k8s.io
+        kind: DockerMachineTemplate
+        name: composite-docker-workers

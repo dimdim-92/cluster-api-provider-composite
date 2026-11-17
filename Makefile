@@ -26,6 +26,7 @@ export VERSION IMAGE KUSTOMIZE GO HELM GOLANGCI_LINT
 .PHONY: verify-tools verify-headers headers-fix verify-api-deps
 .PHONY: lint-api
 .PHONY: verify-hygiene verify-vulnerabilities
+.PHONY: quickstart quickstart-status quickstart-down
 
 all: verify
 
@@ -143,6 +144,16 @@ verify-packaging:
 	$(HELM) lint helm
 	$(KUSTOMIZE) build config/default >/dev/null
 	$(HELM) template composite helm --namespace composite-system --include-crds >/dev/null
+
+# Disposable Composite + CAPD workload on Kubernetes in Docker; no host Go required.
+quickstart:
+	bash hack/quickstart.sh up
+
+quickstart-status:
+	bash hack/quickstart.sh status
+
+quickstart-down:
+	bash hack/quickstart.sh down
 
 run:
 	tilt up

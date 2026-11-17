@@ -165,6 +165,13 @@ Creating a CompositeProvider starts independent native readiness, endpoint and
 bootstrap checks; attachment failure does not gate empty-cluster readiness.
 Retired attachment identities remain recorded and cannot silently rebind.
 
+The [Docker-provider quickstart](development.md#docker-provider-quickstart) exercises
+this model with one canonical CAPD DockerCluster, native kubeadm control plane and
+Docker worker. Its runner explicitly publishes CAPD's discovered load-balancer
+endpoint on CompositeCluster once; this is test-fixture wiring, not native-to-Composite
+endpoint discovery in the controller. Several DockerCluster attachments would share
+CAPD's Cluster-name-keyed load balancer, so the fixture intentionally uses only one.
+
 The endpoint comes from CompositeCluster, falling back to the owning Cluster.
 Paths default to `spec.controlPlaneEndpoint`; suffixes `port`, `host`/`ip`, or
 anything else select a port, host, or `{host, port}` value respectively.

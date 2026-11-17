@@ -30,7 +30,7 @@ import (
 
 func TestToolPolicy_RequiresSelectedVersions(t *testing.T) {
 	root := policyFixture(t, "verify-tools.sh")
-	goCommand := policyCommand(t, root, "fake-go", "go1.26.10")
+	goCommand := policyCommand(t, root, "fake-go", "go1.26.11")
 	lintCommand := policyCommand(t, root, "fake-lint", "golangci-lint has version 2.12.2 built with go1.26.8")
 	helmCommand := policyCommand(t, root, "fake-helm", "v4.2.0+test")
 	t.Setenv("GO", goCommand)
@@ -38,6 +38,13 @@ func TestToolPolicy_RequiresSelectedVersions(t *testing.T) {
 	t.Setenv("HELM", helmCommand)
 	_, err := runPolicy(t, root, "verify-tools.sh")
 	require.NoError(t, err)
+	for _, version := range []string{"go1.26.10", "go1.26.110", "go1.27.4"} {
+		policyCommand(t, root, "fake-go", version)
+		output, err := runPolicy(t, root, "verify-tools.sh")
+		require.Error(t, err)
+		assert.Contains(t, string(output), "Go version mismatch")
+	}
+	policyCommand(t, root, "fake-go", "go1.26.11")
 	policyCommand(t, root, "fake-helm", "v3.19.0")
 	output, err := runPolicy(t, root, "verify-tools.sh")
 	require.Error(t, err)

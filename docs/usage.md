@@ -15,6 +15,13 @@ or workload clusters on your behalf. Choose either the
 provider config and a published version, or Helm—not both for the same controller.
 clusterctl's provider inventory is installation metadata, not a provider attachment.
 
+To exercise a real provider locally without cloud credentials, start with the
+[Docker-provider quickstart](development.md#docker-provider-quickstart). Its
+[native Docker profile](../local/quickstart-templates.yaml) and
+[consumer/worker manifest](../local/quickstart.yaml) use the same attachment API
+shown below. The runner explicitly publishes CAPD's discovered endpoint and checks
+native worker availability as well as CompositeProvider Ready.
+
 Select the management kubeconfig for this shell before running the examples:
 
 ```sh

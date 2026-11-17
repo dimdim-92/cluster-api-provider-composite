@@ -10,6 +10,12 @@ For Kamaji, include `CompositeCluster` in its
 `--dynamic-infrastructure-clusters` setting and grant its controller permission
 to publish the endpoint on CompositeCluster.
 
+For a disposable local installation with the real Docker infrastructure provider,
+use the [Docker-provider quickstart](development.md#docker-provider-quickstart).
+It installs CAPI/CAPD, Composite and a one-control-plane/one-worker test workload;
+no cloud credentials are used. Its privileged Docker-socket access and one-time
+endpoint publication are development-only setup, not production defaults.
+
 ## Install
 
 Choose one installer for each controller installation. Both use the same generated

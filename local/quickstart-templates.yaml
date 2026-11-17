@@ -1,0 +1,52 @@
+# Immutable local CAPD source revisions; no cloud credentials are needed.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: composite-quickstart
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: DockerClusterTemplate
+metadata:
+  name: docker-local-v1
+  namespace: composite-quickstart
+spec:
+  template:
+    spec:
+      controlPlaneEndpoint:
+        port: 6443
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+kind: KubeadmConfigTemplate
+metadata:
+  name: docker-bootstrap-v1
+  namespace: composite-quickstart
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            - name: eviction-hard
+              value: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: CompositeProviderTemplate
+metadata:
+  name: docker-local-v1
+spec:
+  provider: docker
+  account: local
+  region: local
+  infraClusterKind:
+    apiGroup: infrastructure.cluster.x-k8s.io
+    kind: DockerCluster
+  infrastructureTemplateRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+    kind: DockerClusterTemplate
+    namespace: composite-quickstart
+    name: docker-local-v1
+  bootstrapTemplateRef:
+    apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+    kind: KubeadmConfigTemplate
+    namespace: composite-quickstart
+    name: docker-bootstrap-v1

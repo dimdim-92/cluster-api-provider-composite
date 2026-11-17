@@ -2,12 +2,12 @@
 
 ## Prerequisites
 
-Install Go **1.26.10**, golangci-lint **2.12.2** and Helm **4.2.0**. The module
+Install Go **1.26.11**, golangci-lint **2.12.2** and Helm **4.2.0**. The module
 toolchain directives select the Go patch version automatically when supported.
 [hack/tools.env](../hack/tools.env) is the source of truth for local verification
 and generation tools, including controller-gen **v0.22.0**. Both Go modules require
 Go 1.26.0 or newer and select the pinned local toolchain. Container builds use the
-separate digest-pinned Go **1.27.3-alpine** image in
+separate digest-pinned Go **1.27.4-alpine** image in
 [build/operator.Dockerfile](../build/operator.Dockerfile).
 Git, Bash and jq are needed for the offline release-policy tests; public network
 access is needed for tools/modules and vulnerability data. Docker is required for
@@ -216,6 +216,100 @@ empty template admission, initialization latching and teardown. Provider coverag
 uses absent cluster provider configuration and independent CompositeProvider
 creation, failure/recovery and retirement. Historical cluster provider-bindings records and old configuration are not
 supported attachment paths.
+
+## Docker-provider quickstart
+
+Use the real Cluster API Docker provider (CAPD) to test Composite without cloud
+credentials or publishing an image. This creates a disposable kind management
+cluster named `composite-quickstart` and a workload named `composite-docker`, with
+one kubeadm control-plane node and one native Docker worker. It is a development
+fixture, not a production installation or a multi-provider compatibility test.
+
+### Prerequisites
+
+- A running [Docker Engine or Docker Desktop](https://docs.docker.com/get-started/get-docker/)
+  in Linux-container mode, with Buildx and an amd64 or arm64 daemon. Use the local
+  standard `/var/run/docker.sock`; rootless/custom-socket and remote daemons are
+  outside this quickstart. Allow at least 6 GB of Docker memory; 8 GB is recommended.
+- [kind](https://kind.sigs.k8s.io/docs/user/quick-start/) **v0.31.0 or newer**,
+  [kubectl](https://kubernetes.io/docs/tasks/tools/) **1.34.x**,
+  [clusterctl](https://cluster-api.sigs.k8s.io/user/quick-start#install-clusterctl)
+  **v1.12.4**, Helm **4.2.0**, Make and Bash on `PATH`.
+- Public network access for the pinned builder/runtime images, provider releases,
+  cert-manager, node images and Calico. No local Go installation is needed.
+
+**Security:** CAPD runs privileged with the host Docker socket mounted through the
+[kind configuration](../local/quickstart-kind.yaml). That is effectively root access
+to the Docker host. Only run this in a trusted local development environment;
+Composite itself keeps the shipped non-root security settings and generated RBAC.
+
+### Run and inspect
+
+From the repository root:
+
+```sh
+make quickstart
+make quickstart-status
+kubectl --kubeconfig out/quickstart/workload.kubeconfig get nodes
+```
+
+The [runner](../hack/quickstart.sh) builds the existing operator Dockerfile for the
+Docker daemon's architecture, checks its binary version and loads it into kind.
+It installs CAPI core, kubeadm bootstrap/control-plane and CAPD **v1.12.4**, then
+Composite through the local Helm chart. `CLUSTER_TOPOLOGY=true` is set during
+provider installation because CAPD requires it to admit DockerClusterTemplates,
+even though these manifests do not use ClusterClass.
+
+The [native source templates and profile](../local/quickstart-templates.yaml) are
+created first. The [workload manifest](../local/quickstart.yaml) references Composite
+as infrastructure, attaches that Docker profile and uses the generated
+`composite-docker-infra-docker` KubeadmConfigTemplate for its MachineDeployment.
+The node image is Kubernetes **v1.34.0**, pinned to its
+[published multiarch digest](https://hub.docker.com/v2/repositories/kindest/node/tags/v1.34.0).
+The runner installs [Calico **v3.31.0**](https://docs.tigera.io/calico/3.31/getting-started/kubernetes/requirements)
+on the workload and waits for the attachment
+Ready condition, control-plane initialization, native worker availability and Ready
+workload nodes. CompositeCluster Ready alone does not prove any of those outcomes.
+
+**Endpoint handoff:** CAPD discovers its load-balancer address on DockerCluster.
+Composite deliberately does not read that address upward, and KubeadmControlPlane
+cannot initialize without a Cluster endpoint. The runner waits for CAPD's actual
+IP/port and publishes that exact endpoint on CompositeCluster once. It does not
+modify sources, native child ownership, durable pins or status, and it does not add
+Docker-specific behavior to the operator. This is explicit test-harness wiring,
+not automatic endpoint discovery. See the [upstream CAPD quickstart](https://github.com/kubernetes-sigs/cluster-api/blob/v1.12.4/docs/book/src/user/quick-start.md).
+
+Management access is isolated in ignored `out/quickstart/kubeconfig`; workload
+access is in ignored `out/quickstart/workload.kubeconfig`. Your default kubeconfig
+and current context are not changed. Startup refuses to reuse either reserved
+cluster name. Use one Docker attachment only: CAPD keys the load-balancer container
+by the actual CAPI Cluster name, not by attachment/region or namespace.
+
+For a failed startup, keep the controllers running and inspect:
+
+```sh
+kubectl --kubeconfig out/quickstart/kubeconfig -n composite-system logs deployment/composite --tail=100
+kubectl --kubeconfig out/quickstart/kubeconfig -n composite-quickstart get cluster,cocl,cprov,dockercluster,machine
+kubectl --kubeconfig out/quickstart/kubeconfig -n composite-quickstart describe compositeprovider docker
+kubectl --kubeconfig out/quickstart/kubeconfig -n capd-system logs deployment/capd-controller-manager --tail=100
+```
+
+### Cleanup and rebuild
+
+```sh
+make quickstart-down
+make quickstart   # Rebuild from the current checkout on a fresh management cluster.
+```
+
+Cleanup deletes the owning CAPI Cluster and waits for normal native/Composite
+teardown **before** deleting kind. CAPD workload nodes and its load balancer are
+sibling Docker containers; deleting only the management kind cluster would strand
+them. If workload deletion fails, cleanup stops and retains the management cluster
+for diagnosis/retry. Do not strip finalizers or delete CRDs/controllers first.
+Local images, caches and ignored output files remain. Do not apply the whole
+`local/` directory: other examples require clouds, and the Tilt manifests are not
+the installation baseline. See [operations](operations.md#upgrade-and-uninstall)
+for lifecycle constraints.
 
 ## Build and publish an image
 

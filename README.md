@@ -1,9 +1,12 @@
 # cluster-api-provider-composite
 
-A Cluster API infrastructure meta-provider. One `CompositeCluster` coordinates
-native InfraClusters and bootstrap templates behind CAPI's single infrastructure
-reference. Native providers perform cloud operations; CAPI and your orchestration
-manage workers.
+This project explores how a single CAPI-managed Kubernetes cluster could use
+multiple native infrastructure providers, such as Outscale and OpenStack, while
+keeping the existing providers and CAPI in charge of cloud operations and workers.
+
+Composite is a Cluster API infrastructure meta-provider. One `CompositeCluster`
+coordinates native InfraClusters and bootstrap templates behind CAPI's single
+infrastructure reference.
 
 ```text
 Cluster
@@ -70,6 +73,22 @@ This is a development starting point. Tests cover API admission, ownership,
 recovery, policy and operator behavior; native worker integration must be verified
 for the selected provider/control-plane stack. Candidate versions do not imply
 published images or production support.
+
+## Docker-provider quickstart
+
+Test Composite with the real Cluster API Docker provider (CAPD), not cloud VMs.
+With Docker, kind, kubectl, clusterctl and Helm installed, run from this checkout:
+
+```sh
+make quickstart          # Build/install Composite; create one control plane + one worker
+make quickstart-status   # Inspect the provider, native resources and workload nodes
+make quickstart-down     # Delete the workload safely, then its kind management cluster
+```
+
+No host Go, registry push or cloud credentials are needed. CAPD gets access to the
+Docker socket, so use a trusted, disposable local environment. The quickstart uses
+an isolated kubeconfig and explicitly publishes CAPD's discovered endpoint on
+CompositeCluster. See [prerequisites, verification and cleanup](docs/development.md#docker-provider-quickstart).
 
 ## Start here
 

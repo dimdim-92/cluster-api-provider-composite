@@ -1,0 +1,440 @@
+<mxfile host="app.diagrams.net" compressed="false" pages="1">
+  <diagram id="architecture" name="01 - Architecture and contracts">
+    <mxGraphModel dx="1800" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3920" pageHeight="2160" background="#ffffff" math="0" shadow="0">
+      <root>
+        <mxCell id="0" style="" />
+        <mxCell id="1" parent="0" style="" />
+        <mxCell id="stage-examples" value="Manifest examples — expand a card to inspect its full YAML" vertex="1" parent="1" style="swimlane;html=1;horizontal=1;startSize=64;container=1;collapsible=0;rounded=1;arcSize=6;fillColor=#f1f5f9;swimlaneFillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1.5;fontFamily=Arial;fontSize=26;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="40" y="1740" width="3840" height="310" as="geometry" />
+        </mxCell>
+        <mxCell id="stage-native" value="4  Native resources and execution" vertex="1" parent="1" style="swimlane;html=1;horizontal=1;startSize=64;container=1;collapsible=0;rounded=1;arcSize=6;fillColor=#f1f5f9;swimlaneFillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1.5;fontFamily=Arial;fontSize=26;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="2780" y="240" width="1100" height="1440" as="geometry" />
+        </mxCell>
+        <mxCell id="stage-composite" value="3  Composite and control plane" vertex="1" parent="1" style="swimlane;html=1;horizontal=1;startSize=64;container=1;collapsible=0;rounded=1;arcSize=6;fillColor=#f1f5f9;swimlaneFillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1.5;fontFamily=Arial;fontSize=26;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="1840" y="240" width="740" height="1440" as="geometry" />
+        </mxCell>
+        <mxCell id="stage-capi" value="2  Cluster API" vertex="1" parent="1" style="swimlane;html=1;horizontal=1;startSize=64;container=1;collapsible=0;rounded=1;arcSize=6;fillColor=#f1f5f9;swimlaneFillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1.5;fontFamily=Arial;fontSize=26;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="980" y="240" width="660" height="1440" as="geometry" />
+        </mxCell>
+        <mxCell id="stage-inputs" value="1  Shared configuration" vertex="1" parent="1" style="swimlane;html=1;horizontal=1;startSize=64;container=1;collapsible=0;rounded=1;arcSize=6;fillColor=#f1f5f9;swimlaneFillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1.5;fontFamily=Arial;fontSize=26;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="40" y="240" width="740" height="1440" as="geometry" />
+        </mxCell>
+        <mxCell id="a-infra" parent="stage-native" style="swimlane;html=1;horizontal=1;startSize=60;container=1;collapsible=0;rounded=1;arcSize=6;fillColor=#D6F0EA;swimlaneFillColor=#f7fef9;strokeColor=#15803d;fontSize=22;fontStyle=1;fontFamily=Arial;fontColor=#0f172a;spacing=14;shadow=0;" value="Providers InfraClusters" vertex="1">
+          <mxGeometry height="300" width="1020" x="40" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="a-osc" parent="a-infra" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#D6F0EA;strokeColor=#15803d;spacing=10;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;Outscale - eu-west-2 (Paris)&lt;/b&gt;&lt;br&gt;OscCluster/cluster-demo-infra" vertex="1">
+          <mxGeometry height="72" width="980" x="20" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="a-par" parent="a-infra" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#D6F0EA;strokeColor=#15803d;spacing=10;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;OpenStack - EU-WEST-PAR (Paris)&lt;/b&gt;&lt;br&gt;OpenStackCluster/cluster-demo-infra" vertex="1">
+          <mxGeometry height="72" width="980" x="20" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="a-waw" parent="a-infra" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#D6F0EA;strokeColor=#15803d;spacing=10;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;OpenStack - WAW1&amp;nbsp;(Warsaw)&lt;/b&gt;&lt;br&gt;OpenStackCluster/cluster-demo-ovh-varsovie-infra" vertex="1">
+          <mxGeometry height="72" width="980" x="20" y="225" as="geometry" />
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-29" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontFamily=Arial;fontColor=#0f172a;fontSize=24;spacing=0;shadow=0;fillColor=#f8fafc;strokeColor=#e2e8f0;" value="" vertex="1">
+          <mxGeometry height="66" width="3840" x="40" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="a-draft" parent="1" style="rounded=1;arcSize=12;html=1;fillColor=#fef3c7;strokeColor=#b45309;fontSize=21;fontColor=#0f172a;fontFamily=Arial;spacing=10;shadow=0;" value="&lt;font style=&quot;font-size: 21px;&quot;&gt;ALPHA · attachment-only model&lt;/font&gt;" vertex="1">
+          <mxGeometry height="52" width="920" x="2960" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="a-key-template" parent="1" style="rounded=1;arcSize=10;html=1;fillColor=#d6f0ea;strokeColor=#0f766e;fontSize=21;fontStyle=1;fontFamily=Arial;fontColor=#0f172a;spacing=6;shadow=0;" value="Provider" vertex="1">
+          <mxGeometry height="40" width="155" x="585" y="174" as="geometry" />
+        </mxCell>
+        <mxCell id="a-key-capi" parent="1" style="rounded=1;arcSize=10;html=1;fillColor=#dbeafe;strokeColor=#2563eb;fontSize=21;fontStyle=1;fontFamily=Arial;fontColor=#0f172a;spacing=6;shadow=0;" value="CAPI" vertex="1">
+          <mxGeometry height="40" width="155" x="60" y="174" as="geometry" />
+        </mxCell>
+        <mxCell id="a-key-composite" parent="1" style="rounded=1;arcSize=10;html=1;fillColor=#ffedd5;strokeColor=#c2410c;fontSize=21;fontStyle=1;fontFamily=Arial;fontColor=#0f172a;spacing=6;shadow=0;" value="Composite" vertex="1">
+          <mxGeometry height="40" width="155" x="410" y="174" as="geometry" />
+        </mxCell>
+        <mxCell id="a-key-native" parent="1" style="rounded=1;arcSize=10;html=1;fillColor=#fee2e2;strokeColor=#b91c1c;fontSize=21;fontStyle=1;fontFamily=Arial;fontColor=#0f172a;spacing=6;shadow=0;" value="Kubernetes" vertex="1">
+          <mxGeometry height="40" width="155" x="760" y="174" as="geometry" />
+        </mxCell>
+        <mxCell id="a-key-flow" edge="1" parent="1" style="html=1;strokeColor=#475569;strokeWidth=2.5;endArrow=block;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1040" y="194" as="sourcePoint" />
+            <mxPoint x="1130" y="194" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="a-key-flow-text" parent="1" style="text;html=1;align=left;fontSize=21;fontColor=#0f172a;fontFamily=Arial;spacing=0;shadow=0;" value="Action / data flow" vertex="1">
+          <mxGeometry height="40" width="400" x="1150" y="174" as="geometry" />
+        </mxCell>
+        <mxCell id="a-key-ref" edge="1" parent="1" style="html=1;strokeColor=#2563eb;strokeWidth=2.5;dashed=1;endArrow=open;endFill=0;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1600" y="194" as="sourcePoint" />
+            <mxPoint x="1690" y="194" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="a-key-ref-text" parent="1" style="text;html=1;align=left;fontSize=21;fontColor=#0f172a;fontFamily=Arial;spacing=0;shadow=0;" value="Reference / read" vertex="1">
+          <mxGeometry height="40" width="400" x="1710" y="174" as="geometry" />
+        </mxCell>
+        <mxCell id="a-cluster" parent="stage-capi" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;spacing=14;fontSize=22;align=left;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;div align=&quot;left&quot;&gt;&lt;b&gt;CAPI Cluster&lt;br&gt;&lt;/b&gt;&lt;br&gt;- CAPI Cluster instance&lt;/div&gt;- ClusterClass JSON patches applied" vertex="1">
+          <mxGeometry height="150" width="580" x="40" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="a-cc" parent="stage-inputs" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#FFEDD5;strokeColor=#C2410C;strokeWidth=1;spacing=14;fontSize=22;align=left;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;CompositeClusterTemplate&lt;/b&gt;&lt;br&gt;&lt;br&gt;Provider-free shared configuration" vertex="1">
+          <mxGeometry height="180" width="300" x="40" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="a-cp" parent="stage-inputs" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;spacing=14;fontSize=22;align=left;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;div align=&quot;left&quot;&gt;&lt;b&gt;KamajiControlPlaneTemplate&lt;br&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div align=&quot;left&quot;&gt;&lt;b&gt;- Default KCP/TCP values&lt;/b&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="180" width="340" x="380" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="a-ref-profile" edge="1" parent="1" source="composite-provider-attachments" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#2563eb;strokeWidth=2.5;endArrow=open;endFill=0;fontSize=20;labelBackgroundColor=#ffffff;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;fontFamily=Arial;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;" target="a-profiles" value="&lt;font style=&quot;font-size:20px;&quot;&gt;CompositeProvider.templateRef&lt;/font&gt;">
+          <mxGeometry relative="1" as="geometry" y="-12">
+            <Array as="points">
+              <mxPoint x="2210" y="320" />
+              <mxPoint x="900" y="320" />
+              <mxPoint x="900" y="800" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="a-cloud-run" edge="1" parent="1" source="a-native-controllers" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#15803d;strokeWidth=2.5;endArrow=block;fontSize=20;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;fillColor=#D6F0EA;entryDx=0;entryDy=0;entryPerimeter=0;fontFamily=Arial;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;exitDx=0;exitDy=0;" target="75lq0Wn46qkfjBRoJqio-61" value="cloud API">
+          <mxGeometry relative="1" as="geometry" y="-12" x="-.5" />
+        </mxCell>
+        <mxCell id="ref-action-cloud" connectable="0" parent="a-cloud-run" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;provision / clean up&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x=".4" y="-16" width="216" height="38">
+            <mxPoint x="-108.0" y="-19.0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="detail-75lq0Wn46qkfjBRoJqio-7" value="YAML · provider profile" vertex="1" parent="stage-examples" collapsed="1" style="swimlane;html=1;horizontal=1;startSize=48;container=1;collapsible=1;recursiveResize=0;rounded=1;arcSize=8;whiteSpace=wrap;fillColor=#f1f5f9;swimlaneFillColor=#f8fafc;strokeColor=#94a3b8;fontFamily=Arial;fontSize=21;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="1960" y="90" width="880" height="60" as="geometry">
+            <mxRectangle x="1960" y="90" width="920" height="926" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <UserObject label="&lt;div style=&quot;background-color:#f8fafc;color:#0f172a&quot;&gt;&lt;pre style=&quot;margin:0;line-height:1.5;font-family:'JetBrains Mono',monospace;font-size:16px;&quot;&gt;apiVersion: infrastructure.cluster.x-k8s.io/v1beta2&lt;br&gt;kind: CompositeProviderTemplate&lt;br&gt;metadata:&lt;br&gt;  name: osc-paris-account-a-v1&lt;br&gt;spec:&lt;br&gt;  provider: outscale&lt;br&gt;  account: account-a&lt;br&gt;  region: eu-west-2&lt;br&gt;  credentialsRef:&lt;br&gt;    name: outscale-account-a-eu-west-2&lt;br&gt;    namePaths: [/credentials/fromSecret]&lt;br&gt;  infraClusterKind:&lt;br&gt;    apiGroup: infrastructure.cluster.x-k8s.io&lt;br&gt;    kind: OscCluster&lt;br&gt;  zones: [eu-west-2a]&lt;br&gt;  endpointPaths: [spec.controlPlaneEndpoint]&lt;br&gt;  infrastructureTemplateRef:&lt;br&gt;    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1&lt;br&gt;    kind: OscClusterTemplate&lt;br&gt;    namespace: composite-templates&lt;br&gt;    name: osc-paris-account-a-v1&lt;br&gt;  bootstrapTemplateRef:&lt;br&gt;    apiVersion: bootstrap.cluster.x-k8s.io/v1beta2&lt;br&gt;    kind: KubeadmConfigTemplate&lt;br&gt;    namespace: composite-templates&lt;br&gt;    name: outscale-workers-v1&lt;br&gt;  overridePolicy:&lt;br&gt;    infraSpecPaths:&lt;br&gt;      - /network/clusterName&lt;br&gt;      - /network/internetService/name&lt;br&gt;      - /network/net/ipRange&lt;br&gt;    protectedInfraSpecPaths: [/credentials, /network/subregions, /network/disable]&lt;br&gt;    bootstrapPaths: [/files, /preKubeadmCommands]&lt;br&gt;    protectedBootstrapPaths: [/joinConfiguration/nodeRegistration/kubeletExtraArgs]&lt;/pre&gt;&lt;/div&gt;" id="75lq0Wn46qkfjBRoJqio-7">
+          <mxCell parent="detail-75lq0Wn46qkfjBRoJqio-7" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacing=0;fontFamily=monospace;fontSize=16;overflow=visible;" vertex="1">
+            <mxGeometry height="840" width="880" x="20" y="70" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="detail-example-osc-source" value="YAML · infrastructure source" vertex="1" parent="stage-examples" collapsed="1" style="swimlane;html=1;horizontal=1;startSize=48;container=1;collapsible=1;recursiveResize=0;rounded=1;arcSize=8;whiteSpace=wrap;fillColor=#f1f5f9;swimlaneFillColor=#f8fafc;strokeColor=#94a3b8;fontFamily=Arial;fontSize=21;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="40" y="90" width="880" height="60" as="geometry">
+            <mxRectangle x="40" y="90" width="920" height="494" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <UserObject label="&lt;div style=&quot;background-color:#f8fafc;color:#0f172a&quot;&gt;&lt;pre style=&quot;margin:0;line-height:1.5;font-family:'JetBrains Mono',monospace;font-size:16px;&quot;&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;apiVersion&lt;/span&gt;: infrastructure.cluster.x-k8s.io/v1beta1&lt;br&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;kind&lt;/span&gt;: &lt;span style=&quot;color:#0f172a;font-style:italic;&quot;&gt;OscClusterTemplate&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;metadata&lt;/span&gt;:&lt;br&gt;  &lt;span style=&quot;color:#0f172a;&quot;&gt;name&lt;/span&gt;: osc-paris-account-a-v1&lt;br&gt;  &lt;span style=&quot;color:#0f172a;&quot;&gt;namespace&lt;/span&gt;: composite-templates&lt;br&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;spec&lt;/span&gt;:&lt;br&gt;  &lt;span style=&quot;color:#0f172a;&quot;&gt;template&lt;/span&gt;:&lt;br&gt;    &lt;span style=&quot;color:#0f172a;&quot;&gt;spec&lt;/span&gt;:&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;credentials&lt;/span&gt;:&lt;br&gt;        &lt;span style=&quot;color:#0f172a;&quot;&gt;fromSecret&lt;/span&gt;: outscale-account-a-eu-west-2&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;network&lt;/span&gt;:&lt;br&gt;        &lt;span style=&quot;color:#0f172a;&quot;&gt;disable&lt;/span&gt;: [loadbalancer]&lt;br&gt;        &lt;span style=&quot;color:#0f172a;&quot;&gt;natService&lt;/span&gt;: {}&lt;br&gt;        &lt;span style=&quot;color:#0f172a;&quot;&gt;net&lt;/span&gt;:&lt;br&gt;          &lt;span style=&quot;color:#0f172a;&quot;&gt;ipRange&lt;/span&gt;: 10.42.0.0/16&lt;br&gt;        &lt;span style=&quot;color:#0f172a;&quot;&gt;subregions&lt;/span&gt;: [eu-west-2a]&lt;br&gt;&lt;/pre&gt;&lt;/div&gt;" id="example-osc-source">
+          <mxCell parent="detail-example-osc-source" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacing=0;fontFamily=monospace;fontSize=16;overflow=visible;" vertex="1">
+            <mxGeometry height="408" width="880" x="20" y="70" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="detail-example-bootstrap-source" value="YAML · bootstrap source" vertex="1" parent="stage-examples" collapsed="1" style="swimlane;html=1;horizontal=1;startSize=48;container=1;collapsible=1;recursiveResize=0;rounded=1;arcSize=8;whiteSpace=wrap;fillColor=#f1f5f9;swimlaneFillColor=#f8fafc;strokeColor=#94a3b8;fontFamily=Arial;fontSize=21;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="1000" y="90" width="880" height="60" as="geometry">
+            <mxRectangle x="1000" y="90" width="920" height="446" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <UserObject label="&lt;div style=&quot;background-color:#f8fafc; color:#0f172a;&quot;&gt;&lt;pre style=&quot;margin:0;line-height:1.5;font-family:'JetBrains Mono',monospace;font-size:16px;&quot;&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;apiVersion&lt;/span&gt;: bootstrap.cluster.x-k8s.io/v1beta2&lt;br&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;kind&lt;/span&gt;: &lt;span style=&quot;color:#0f172a; font-style: italic;&quot;&gt;KubeadmConfigTemplate&lt;/span&gt;&lt;br&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;metadata&lt;/span&gt;:&lt;br&gt;  &lt;span style=&quot;color:#0f172a;&quot;&gt;name&lt;/span&gt;: outscale-workers-v1&lt;br&gt;  &lt;span style=&quot;color:#0f172a;&quot;&gt;namespace&lt;/span&gt;: composite-templates&lt;br&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;spec&lt;/span&gt;:&lt;br&gt;  &lt;span style=&quot;color:#0f172a;&quot;&gt;template&lt;/span&gt;:&lt;br&gt;    &lt;span style=&quot;color:#0f172a;&quot;&gt;spec&lt;/span&gt;:&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;format&lt;/span&gt;: cloud-config&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;joinConfiguration&lt;/span&gt;:&lt;br&gt;        &lt;span style=&quot;color:#0f172a;&quot;&gt;nodeRegistration&lt;/span&gt;:&lt;br&gt;          &lt;span style=&quot;color:#0f172a;&quot;&gt;name&lt;/span&gt;: &lt;span style=&quot;color:#0f172a;&quot;&gt;'{{ ds.meta_data.local_hostname }}'&lt;/span&gt;&lt;br&gt;          &lt;span style=&quot;color:#0f172a;&quot;&gt;imagePullPolicy&lt;/span&gt;: IfNotPresent&lt;br&gt;          &lt;span style=&quot;color:#0f172a;&quot;&gt;kubeletExtraArgs&lt;/span&gt;:&lt;/pre&gt;&lt;/div&gt;" id="example-bootstrap-source">
+          <mxCell parent="detail-example-bootstrap-source" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacing=0;fontFamily=monospace;fontSize=16;overflow=visible;" vertex="1">
+            <mxGeometry height="360" width="880" x="20" y="70" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-8" parent="stage-capi" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;spacing=14;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;CAPI Cluster Class&lt;/b&gt;" vertex="1">
+          <mxGeometry height="150" width="580" x="40" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="detail-75lq0Wn46qkfjBRoJqio-11" value="YAML · CompositeClusterTemplate" vertex="1" parent="stage-examples" collapsed="1" style="swimlane;html=1;horizontal=1;startSize=48;container=1;collapsible=1;recursiveResize=0;rounded=1;arcSize=8;whiteSpace=wrap;fillColor=#f1f5f9;swimlaneFillColor=#f8fafc;strokeColor=#94a3b8;fontFamily=Arial;fontSize=21;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="40" y="190" width="880" height="60" as="geometry">
+            <mxRectangle x="40" y="190" width="920" height="302" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <UserObject label="&lt;div style=&quot;background-color:#f8fafc;color:#0f172a&quot;&gt;&lt;pre style=&quot;margin:0;line-height:1.5;font-family:'JetBrains Mono',monospace;font-size:16px;&quot;&gt;apiVersion: infrastructure.cluster.x-k8s.io/v1beta2&lt;br&gt;kind: CompositeClusterTemplate&lt;br&gt;metadata:&lt;br&gt;  name: composite-v1&lt;br&gt;  namespace: composite-templates&lt;br&gt;spec:&lt;br&gt;  template:&lt;br&gt;    spec: {}&lt;/pre&gt;&lt;/div&gt;" id="75lq0Wn46qkfjBRoJqio-11">
+          <mxCell parent="detail-75lq0Wn46qkfjBRoJqio-11" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacing=0;fontFamily=monospace;fontSize=16;overflow=visible;" vertex="1">
+            <mxGeometry height="216" width="880" x="20" y="70" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="detail-75lq0Wn46qkfjBRoJqio-15" value="YAML · Cluster + attachment" vertex="1" parent="stage-examples" collapsed="1" style="swimlane;html=1;horizontal=1;startSize=48;container=1;collapsible=1;recursiveResize=0;rounded=1;arcSize=8;whiteSpace=wrap;fillColor=#f1f5f9;swimlaneFillColor=#f8fafc;strokeColor=#94a3b8;fontFamily=Arial;fontSize=21;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="2920" y="90" width="880" height="60" as="geometry">
+            <mxRectangle x="2920" y="90" width="920" height="1118" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <UserObject label="&lt;div style=&quot;background-color:#f8fafc;color:#0f172a&quot;&gt;&lt;pre style=&quot;margin:0;line-height:1.5;font-family:'JetBrains Mono',monospace;font-size:16px;&quot;&gt;apiVersion: cluster.x-k8s.io/v1beta2&lt;br&gt;kind: Cluster&lt;br&gt;metadata:&lt;br&gt;  name: cluster-demo&lt;br&gt;  namespace: kubernetes-cluster-demo&lt;br&gt;spec:&lt;br&gt;  topology:&lt;br&gt;    classRef:&lt;br&gt;      name: composite-v1&lt;br&gt;      namespace: composite-templates&lt;br&gt;    version: v1.34.10&lt;br&gt;    controlPlane:&lt;br&gt;      replicas: 1&lt;br&gt;    variables:&lt;br&gt;      - name: controlPlaneNetwork&lt;br&gt;        value:&lt;br&gt;          serviceType: LoadBalancer&lt;br&gt;      - name: datastoreName&lt;br&gt;        value: default&lt;br&gt;  clusterNetwork:&lt;br&gt;    pods:&lt;br&gt;      cidrBlocks: [172.16.0.0/16]&lt;br&gt;    services:&lt;br&gt;      cidrBlocks: [10.96.0.0/12]&lt;br&gt;---&lt;br&gt;apiVersion: infrastructure.cluster.x-k8s.io/v1beta2&lt;br&gt;kind: CompositeProvider&lt;br&gt;metadata:&lt;br&gt;  name: osc-paris&lt;br&gt;  namespace: kubernetes-cluster-demo&lt;br&gt;spec:&lt;br&gt;  clusterRef: {name: cluster-demo-infra}&lt;br&gt;  templateRef:&lt;br&gt;    name: osc-paris-account-a-v1&lt;br&gt;  infraClusterName: cluster-demo-infra&lt;br&gt;  infraSpec:&lt;br&gt;    network:&lt;br&gt;      clusterName: cluster-demo&lt;br&gt;      internetService:&lt;br&gt;        name: cluster-demo&lt;br&gt;      net:&lt;br&gt;        ipRange: 10.42.0.0/16&lt;/pre&gt;&lt;/div&gt;" id="75lq0Wn46qkfjBRoJqio-15">
+          <mxCell parent="detail-75lq0Wn46qkfjBRoJqio-15" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacing=0;fontFamily=monospace;fontSize=16;overflow=visible;" vertex="1">
+            <mxGeometry height="1032" width="880" x="20" y="70" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-17" edge="1" parent="1" source="75lq0Wn46qkfjBRoJqio-8" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#2563eb;strokeWidth=2.5;endArrow=open;endFill=0;fontSize=20;labelBackgroundColor=#ffffff;exitX=0;exitY=0.3;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitDx=0;exitDy=0;fontFamily=Arial;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;" target="a-cc" value="infrastructure.templateRef">
+          <mxGeometry relative="1" as="geometry" y="-12">
+            <Array as="points">
+              <mxPoint x="940" y="755" />
+              <mxPoint x="940" y="990" />
+              <mxPoint x="230" y="990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-21" parent="1" style="rounded=1;arcSize=10;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontSize=21;fontStyle=1;fontFamily=Arial;fontColor=#0f172a;spacing=6;shadow=0;" value="Kamaji" vertex="1">
+          <mxGeometry height="40" width="155" x="235" y="174" as="geometry" />
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-55" edge="1" parent="1" source="a-operator" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeColor=#c2410c;strokeWidth=2.5;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;arcSize=10;jumpStyle=arc;jumpSize=8;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" target="75lq0Wn46qkfjBRoJqio-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ref-action-composite-reconcile" connectable="0" parent="75lq0Wn46qkfjBRoJqio-55" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;reconcile&lt;br&gt;persist bindings / finalizer&lt;br&gt;publish status / Events&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x="0" y="-16" width="280" height="77">
+            <mxPoint x="-140.0" y="-38.5" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-56" edge="1" parent="1" source="a-operator" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#c2410c;strokeWidth=2.5;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;arcSize=10;jumpStyle=arc;jumpSize=8;exitX=1;exitY=0.15;exitDx=0;exitDy=0;" target="a-osc">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2620" y="1132.5" />
+              <mxPoint x="2620" y="461" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ref-action-outscale" connectable="0" parent="75lq0Wn46qkfjBRoJqio-56" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;render · validate · apply&lt;br&gt;observe readiness&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x=".55" y="-16" width="266" height="54">
+            <mxPoint x="-133.0" y="-27.0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-57" edge="1" parent="1" source="a-operator" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#c2410c;strokeWidth=2.5;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;arcSize=10;jumpStyle=arc;jumpSize=8;exitX=1;exitY=0.35;exitDx=0;exitDy=0;" target="a-par">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2670" y="1162.5" />
+              <mxPoint x="2670" y="541" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ref-action-paris" connectable="0" parent="75lq0Wn46qkfjBRoJqio-57" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;render · validate · apply&lt;br&gt;observe readiness&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x=".55" y="-16" width="266" height="54">
+            <mxPoint x="-133.0" y="-27.0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-58" edge="1" parent="1" source="a-operator" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#c2410c;strokeWidth=2.5;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;arcSize=10;jumpStyle=arc;jumpSize=8;exitX=1;exitY=0.55;exitDx=0;exitDy=0;" target="a-waw">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2720" y="1192.5" />
+              <mxPoint x="2720" y="621" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ref-action-warsaw" connectable="0" parent="75lq0Wn46qkfjBRoJqio-58" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;render · validate · apply&lt;br&gt;observe readiness&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x=".55" y="-16" width="266" height="54">
+            <mxPoint x="-133.0" y="-27.0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-59" edge="1" parent="1" source="a-operator" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2.5;strokeColor=#c2410c;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;arcSize=10;jumpStyle=arc;jumpSize=8;exitX=1;exitY=0.85;exitDx=0;exitDy=0;" target="a-kct">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2760" y="1237.5" />
+              <mxPoint x="2760" y="1035" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ref-action-bootstrap" connectable="0" parent="75lq0Wn46qkfjBRoJqio-59" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;merge bootstrap&lt;br&gt;render / apply&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x="0" y="-16" width="166" height="54">
+            <mxPoint x="-83.0" y="-27.0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="a-operator" parent="stage-composite" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ffedd5;strokeColor=#c2410c;strokeWidth=1;spacing=14;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;Composite operator&lt;/b&gt;&lt;br&gt;Resolve · merge · validate&lt;br&gt;Pin · apply · observe" vertex="1">
+          <mxGeometry height="150" width="660" x="40" y="870" as="geometry" />
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-12" parent="stage-composite" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ffedd5;strokeColor=#c2410c;strokeWidth=1;spacing=14;fontSize=22;align=left;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;CompositeCluster&lt;/b&gt;&lt;br&gt;&lt;br&gt;Provider-free spec&lt;br&gt;Attachments are separate resources" vertex="1">
+          <mxGeometry height="150" width="660" x="40" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-24" parent="stage-composite" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;spacing=14;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;Hosted control plane&lt;/b&gt;&lt;br&gt;e.g. Kamaji&lt;br&gt;Publishes the API endpoint" vertex="1">
+          <mxGeometry height="170" width="200" x="500" y="1140" as="geometry" />
+        </mxCell>
+        <mxCell id="a-infra-template" parent="stage-inputs" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#d6f0ea;strokeColor=#0f766e;spacing=14;fontSize=22;align=left;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;div align=&quot;left&quot;&gt;&lt;b&gt;Native source templates&lt;/b&gt;&lt;br&gt;- OscClusterTemplate&lt;br&gt;- OpenStackClusterTemplate&lt;br&gt;spec.template.spec defaults&lt;/div&gt;" vertex="1">
+          <mxGeometry height="180" width="300" x="40" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="a-bootstrap-template" parent="stage-inputs" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#d6f0ea;strokeColor=#0f766e;spacing=14;fontSize=22;align=left;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;div align=&quot;left&quot;&gt;&lt;b&gt;Kubeadm ConfigTemplate&lt;/b&gt;&lt;br&gt;&lt;br&gt;- Bootstrap defaults&lt;/div&gt;" vertex="1">
+          <mxGeometry height="180" width="300" x="400" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="a-profiles" parent="stage-inputs" style="swimlane;html=1;horizontal=1;startSize=60;container=1;collapsible=0;rounded=1;arcSize=6;fillColor=#ffedd5;strokeColor=#c2410c;fontSize=22;fontStyle=1;fontFamily=Arial;fontColor=#0f172a;spacing=14;shadow=0;swimlaneFillColor=#fff7ed;" value="CompositeProviderTemplate CRs · cluster-scoped" vertex="1">
+          <mxGeometry height="300" width="660" x="40" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="a-osc-profile" parent="a-profiles" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ffedd5;strokeColor=#c2410c;spacing=10;fontSize=22;align=center;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;div align=&quot;center&quot;&gt;&lt;b&gt;osc-paris-account-a-v1&lt;/b&gt;&amp;nbsp;- eu-west-2&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="620" x="20" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="a-par-profile" parent="a-profiles" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ffedd5;strokeColor=#c2410c;spacing=10;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;ovh-paris-account-a-v1&lt;/b&gt;&amp;nbsp;- EU-WEST-PAR" vertex="1">
+          <mxGeometry height="60" width="620" x="20" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="a-waw-profile" parent="a-profiles" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ffedd5;strokeColor=#c2410c;spacing=10;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;ovh-varsovie-account-a-v1&lt;/b&gt;&amp;nbsp;- WAW1" vertex="1">
+          <mxGeometry height="60" width="620" x="20" y="215" as="geometry" />
+        </mxCell>
+        <mxCell id="a-ref-infra" edge="1" parent="1" source="a-profiles" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#2563eb;strokeWidth=2.5;endArrow=open;endFill=0;fontSize=20;labelBackgroundColor=#ffffff;exitX=0.25;exitY=0;entryX=0.5;entryY=1;fontFamily=Arial;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" target="a-infra-template" value="&lt;font style=&quot;font-size:20px;&quot;&gt;infrastructureTemplateRef&lt;/font&gt;">
+          <mxGeometry relative="1" as="geometry" y="-12" />
+        </mxCell>
+        <mxCell id="a-ref-bootstrap" edge="1" parent="1" source="a-profiles" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#2563eb;strokeWidth=2.5;endArrow=open;endFill=0;fontSize=20;labelBackgroundColor=#ffffff;exitX=0.75;exitY=0;entryX=0.5;entryY=1;fontFamily=Arial;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" target="a-bootstrap-template" value="&lt;font style=&quot;font-size:20px;&quot;&gt;bootstrapTemplateRef&lt;/font&gt;">
+          <mxGeometry relative="1" as="geometry" y="-12" />
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-30" edge="1" parent="1" source="75lq0Wn46qkfjBRoJqio-8" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#2563eb;strokeWidth=2.5;endArrow=open;endFill=0;fontSize=20;labelBackgroundColor=#ffffff;exitX=0;exitY=0.75;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitDx=0;exitDy=0;fontFamily=Arial;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;" target="a-cp" value="controlPlane.templateRef">
+          <mxGeometry relative="1" as="geometry" y="-12">
+            <Array as="points">
+              <mxPoint x="880" y="822.5" />
+              <mxPoint x="880" y="1030" />
+              <mxPoint x="590" y="1030" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-39" edge="1" parent="1" source="75lq0Wn46qkfjBRoJqio-19" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeWidth=2.5;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;arcSize=10;jumpStyle=arc;jumpSize=8;strokeColor=#2563eb;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" target="75lq0Wn46qkfjBRoJqio-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-40" connectable="0" parent="75lq0Wn46qkfjBRoJqio-39" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;labelBackgroundColor=#ffffff;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;resolve&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x="0" y="-16" width="130" height="38">
+            <mxPoint x="-65.0" y="-19.0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-50" edge="1" parent="1" source="75lq0Wn46qkfjBRoJqio-19" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2.5;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;arcSize=10;jumpStyle=arc;jumpSize=8;strokeColor=#2563eb;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="75lq0Wn46qkfjBRoJqio-24">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1310" y="1340" />
+              <mxPoint x="2440" y="1340" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ref-action-instantiate-control-plane" connectable="0" parent="75lq0Wn46qkfjBRoJqio-50" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;instantiate&lt;br&gt;control plane&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x="-.55" y="-16" width="146" height="54">
+            <mxPoint x="-73.0" y="-27.0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-51" edge="1" parent="1" source="75lq0Wn46qkfjBRoJqio-19" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2.5;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;arcSize=10;jumpStyle=arc;jumpSize=8;strokeColor=#2563eb;exitX=1;exitY=0.8;exitDx=0;exitDy=0;" target="75lq0Wn46qkfjBRoJqio-12">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1740" y="1090" />
+              <mxPoint x="1740" y="745" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ref-action-instantiate-infra" connectable="0" parent="75lq0Wn46qkfjBRoJqio-51" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;instantiate&lt;br&gt;infrastructure&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x=".6" y="-16" width="156" height="54">
+            <mxPoint x="-78.0" y="-27.0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-19" parent="stage-capi" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;spacing=14;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;CAPI Controller Manager&lt;/b&gt;" vertex="1">
+          <mxGeometry height="150" width="580" x="40" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-52" edge="1" parent="1" source="75lq0Wn46qkfjBRoJqio-33" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2.5;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;arcSize=10;jumpStyle=arc;jumpSize=8;strokeColor=#7c3aed;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="75lq0Wn46qkfjBRoJqio-24">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ref-action-kamaji" connectable="0" parent="75lq0Wn46qkfjBRoJqio-52" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;reconcile KCP / TCP&lt;br&gt;publish endpoint&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x="0" y="-16" width="206" height="54">
+            <mxPoint x="-103.0" y="-27.0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-33" parent="stage-composite" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;strokeWidth=2;spacing=14;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;Kamaji Control Plane System&lt;/b&gt;" vertex="1">
+          <mxGeometry height="170" width="200" x="40" y="1140" as="geometry" />
+        </mxCell>
+        <mxCell id="detail-75lq0Wn46qkfjBRoJqio-36" value="YAML · Kamaji control-plane template" vertex="1" parent="stage-examples" collapsed="1" style="swimlane;html=1;horizontal=1;startSize=48;container=1;collapsible=1;recursiveResize=0;rounded=1;arcSize=8;whiteSpace=wrap;fillColor=#f1f5f9;swimlaneFillColor=#f8fafc;strokeColor=#94a3b8;fontFamily=Arial;fontSize=21;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="2920" y="190" width="880" height="60" as="geometry">
+            <mxRectangle x="2920" y="190" width="920" height="758" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <UserObject label="&lt;div style=&quot;background-color:#f8fafc;color:#0f172a&quot;&gt;&lt;pre style=&quot;margin:0;line-height:1.5;font-family:'JetBrains Mono',monospace;font-size:16px;&quot;&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;apiVersion&lt;/span&gt;: &lt;span style=&quot;color:#0f172a;font-style:italic;&quot;&gt;controlplane.cluster.x-k8s.io/v1alpha1&lt;br&gt;&lt;/span&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;kind&lt;/span&gt;: &lt;span style=&quot;color:#0f172a;font-style:italic;&quot;&gt;KamajiControlPlaneTemplate&lt;br&gt;&lt;/span&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;metadata&lt;/span&gt;:&lt;br&gt;  &lt;span style=&quot;color:#0f172a;&quot;&gt;name&lt;/span&gt;: composite-kamaji-v1&lt;br&gt;  &lt;span style=&quot;color:#0f172a;&quot;&gt;namespace&lt;/span&gt;: composite-templates&lt;br&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;spec&lt;/span&gt;:&lt;br&gt;  &lt;span style=&quot;color:#0f172a;&quot;&gt;template&lt;/span&gt;:&lt;br&gt;    &lt;span style=&quot;color:#0f172a;&quot;&gt;spec&lt;/span&gt;:&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;dataStoreName&lt;/span&gt;: default&lt;br&gt;      &lt;span style=&quot;color:#0f172a;font-style:italic;&quot;&gt;# CAPI supplies version and replicas from Cluster.spec.topology.&lt;br&gt;&lt;/span&gt;&lt;span style=&quot;color:#0f172a;font-style:italic;&quot;&gt;      &lt;/span&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;network&lt;/span&gt;:&lt;br&gt;        &lt;span style=&quot;color:#0f172a;&quot;&gt;serviceType&lt;/span&gt;: LoadBalancer&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;addons&lt;/span&gt;:&lt;br&gt;        &lt;span style=&quot;color:#0f172a;&quot;&gt;coreDNS&lt;/span&gt;: {}&lt;br&gt;        &lt;span style=&quot;color:#0f172a;&quot;&gt;kubeProxy&lt;/span&gt;: {}&lt;br&gt;        &lt;span style=&quot;color:#0f172a;&quot;&gt;konnectivity&lt;/span&gt;:&lt;br&gt;          &lt;span style=&quot;color:#0f172a;&quot;&gt;agent&lt;/span&gt;:&lt;br&gt;            &lt;span style=&quot;color:#0f172a;&quot;&gt;mode&lt;/span&gt;: DaemonSet&lt;br&gt;            &lt;span style=&quot;color:#0f172a;&quot;&gt;hostNetwork&lt;/span&gt;: true&lt;br&gt;            &lt;span style=&quot;color:#0f172a;&quot;&gt;tolerations&lt;/span&gt;:&lt;br&gt;              - &lt;span style=&quot;color:#0f172a;&quot;&gt;operator&lt;/span&gt;: Exists&lt;br&gt;          &lt;span style=&quot;color:#0f172a;&quot;&gt;server&lt;/span&gt;:&lt;br&gt;            &lt;span style=&quot;color:#0f172a;&quot;&gt;port&lt;/span&gt;: 8132&lt;br&gt;            &lt;span style=&quot;color:#0f172a;&quot;&gt;extraArgs&lt;/span&gt;:&lt;br&gt;              - --admin-bind-address=0.0.0.0&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;kubelet&lt;/span&gt;:&lt;br&gt;        &lt;span style=&quot;color:#0f172a;&quot;&gt;preferredAddressTypes&lt;/span&gt;: [InternalIP, ExternalIP, Hostname]&lt;br&gt;&lt;/pre&gt;&lt;/div&gt;" id="75lq0Wn46qkfjBRoJqio-36">
+          <mxCell parent="detail-75lq0Wn46qkfjBRoJqio-36" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacing=0;fontFamily=monospace;fontSize=16;overflow=visible;" vertex="1">
+            <mxGeometry height="672" width="880" x="20" y="70" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-37" edge="1" parent="1" source="a-cluster" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#2563eb;strokeWidth=2.5;endArrow=open;endFill=0;fontSize=20;labelBackgroundColor=#ffffff;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;fontFamily=Arial;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;" target="75lq0Wn46qkfjBRoJqio-8" value="&lt;font style=&quot;font-size:20px;&quot;&gt;topology&lt;br&gt;classRef&lt;/font&gt;">
+          <mxGeometry relative="1" as="geometry" y="-12" />
+        </mxCell>
+        <mxCell id="detail-75lq0Wn46qkfjBRoJqio-53" value="YAML · CompositeCluster + attachments" vertex="1" parent="stage-examples" collapsed="1" style="swimlane;html=1;horizontal=1;startSize=48;container=1;collapsible=1;recursiveResize=0;rounded=1;arcSize=8;whiteSpace=wrap;fillColor=#f1f5f9;swimlaneFillColor=#f8fafc;strokeColor=#94a3b8;fontFamily=Arial;fontSize=21;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="1960" y="190" width="880" height="60" as="geometry">
+            <mxRectangle x="1960" y="190" width="920" height="926" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <UserObject label="&lt;div style=&quot;background-color:#f8fafc;color:#0f172a&quot;&gt;&lt;pre style=&quot;margin:0;line-height:1.5;font-family:'JetBrains Mono',monospace;font-size:16px;&quot;&gt;apiVersion: infrastructure.cluster.x-k8s.io/v1beta2&lt;br&gt;kind: CompositeCluster&lt;br&gt;metadata:&lt;br&gt;  name: cluster-demo-infra&lt;br&gt;  namespace: kubernetes-cluster-demo&lt;br&gt;spec: {}&lt;br&gt;---&lt;br&gt;apiVersion: infrastructure.cluster.x-k8s.io/v1beta2&lt;br&gt;kind: CompositeProvider&lt;br&gt;metadata:&lt;br&gt;  name: ovh-paris&lt;br&gt;  namespace: kubernetes-cluster-demo&lt;br&gt;spec:&lt;br&gt;  clusterRef: {name: cluster-demo-infra}&lt;br&gt;  templateRef:&lt;br&gt;    name: ovh-paris-account-a-v1&lt;br&gt;  infraClusterName: cluster-demo-infra&lt;br&gt;  infraSpec:&lt;br&gt;    managedSubnets:&lt;br&gt;      - cidr: 10.6.0.0/24&lt;br&gt;---&lt;br&gt;apiVersion: infrastructure.cluster.x-k8s.io/v1beta2&lt;br&gt;kind: CompositeProvider&lt;br&gt;metadata:&lt;br&gt;  name: ovh-varsovie&lt;br&gt;  namespace: kubernetes-cluster-demo&lt;br&gt;spec:&lt;br&gt;  clusterRef: {name: cluster-demo-infra}&lt;br&gt;  templateRef:&lt;br&gt;    name: ovh-varsovie-account-a-v1&lt;br&gt;  infraClusterName: cluster-demo-ovh-varsovie-infra&lt;br&gt;  infraSpec:&lt;br&gt;    managedSubnets:&lt;br&gt;      - cidr: 10.7.0.0/24&lt;/pre&gt;&lt;/div&gt;" id="75lq0Wn46qkfjBRoJqio-53">
+          <mxCell parent="detail-75lq0Wn46qkfjBRoJqio-53" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacing=0;fontFamily=monospace;fontSize=16;overflow=visible;" vertex="1">
+            <mxGeometry height="840" width="880" x="20" y="70" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="a-kct" parent="stage-native" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#D6F0EA;strokeColor=#15803d;spacing=14;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;Rendered KubeadmConfigTemplates&lt;/b&gt;&lt;br&gt;One per attachment/workloads&lt;br&gt;Consumed by MachineDeployments" vertex="1">
+          <mxGeometry height="130" width="1020" x="40" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="a-native-controllers" parent="stage-native" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#D6F0EA;strokeColor=#15803d;spacing=14;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;Native provider controllers&lt;/b&gt;&lt;br&gt;CAPOSC / CAPO" vertex="1">
+          <mxGeometry height="150" width="480" x="40" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="a-native-run" edge="1" parent="1" source="a-infra" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#15803d;strokeWidth=2.5;endArrow=block;exitX=0.24;exitY=1;entryX=0.5;entryY=0;fillColor=#D6F0EA;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" target="a-native-controllers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ref-action-native-reconcile" connectable="0" parent="a-native-run" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;reconcile&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x="0" y="-16" width="130" height="38">
+            <mxPoint x="-65.0" y="-19.0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="75lq0Wn46qkfjBRoJqio-61" parent="stage-native" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;strokeColor=#15803D;fillColor=#D6F0EA;fontFamily=Arial;fontColor=#0f172a;fontSize=22;spacing=14;shadow=0;" value="&lt;font style=&quot;font-size: 24px;&quot;&gt;&lt;b&gt;Regional cloud infrastructure&lt;/b&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="150" width="480" x="580" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="ref-resolve-profiles" edge="1" parent="1" source="a-operator" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#2563eb;strokeWidth=2.5;endArrow=open;endFill=0;fontSize=20;labelBackgroundColor=#ffffff;exitX=0;exitY=0.25;exitDx=0;exitDy=0;entryX=1;entryY=0.8;entryDx=0;entryDy=0;fontFamily=Arial;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;" target="a-profiles" value="&lt;font style=&quot;font-size:20px;&quot;&gt;resolve attachments / templates&lt;br&gt;verify attachment / source pins&lt;/font&gt;">
+          <mxGeometry relative="1" as="geometry" y="-12" x="-.35">
+            <Array as="points">
+              <mxPoint x="1800" y="1147.5" />
+              <mxPoint x="1800" y="900" />
+              <mxPoint x="920" y="900" />
+              <mxPoint x="920" y="890" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ref-reconcile-cluster" edge="1" parent="1" source="75lq0Wn46qkfjBRoJqio-19" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2.5;exitX=1;exitY=0.2;exitDx=0;exitDy=0;entryX=1;entryY=0.7;entryDx=0;entryDy=0;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;arcSize=10;jumpStyle=arc;jumpSize=8;strokeColor=#2563eb;" target="a-cluster">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1780" y="1000" />
+              <mxPoint x="1780" y="465" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ref-action-cluster" connectable="0" parent="ref-reconcile-cluster" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;reconcile topology&lt;br&gt;publish Cluster status&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x=".3" y="-16" width="236" height="54">
+            <mxPoint x="-118.0" y="-27.0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ref-machine-templates" parent="stage-inputs" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#D6F0EA;strokeColor=#15803d;spacing=14;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;Native MachineTemplates&lt;/b&gt;&lt;br&gt;Caller-authored OscMachineTemplate / OpenStackMachineTemplate&lt;br&gt;Regional credentials · networks · instance settings" vertex="1">
+          <mxGeometry height="170" width="660" x="40" y="1070" as="geometry" />
+        </mxCell>
+        <mxCell id="ref-machine-deployments" parent="stage-native" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;spacing=14;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;MachineDeployments&lt;/b&gt;&lt;br&gt;Caller-authored pools: Outscale · Paris · Warsaw&lt;br&gt;CAPI manages MachineSets and Machines" vertex="1">
+          <mxGeometry height="170" width="480" x="40" y="1000" as="geometry" />
+        </mxCell>
+        <mxCell id="ref-workload-addons" parent="stage-native" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#fee2e2;strokeColor=#b91c1c;spacing=14;fontSize=22;fontFamily=Arial;fontColor=#0f172a;shadow=0;" value="&lt;b&gt;Workload add-ons&lt;/b&gt;&lt;br&gt;CoreDNS · kube-proxy · Konnectivity agents&lt;br&gt;Configured by the Kamaji control-plane template" vertex="1">
+          <mxGeometry height="170" width="480" x="580" y="1000" as="geometry" />
+        </mxCell>
+        <mxCell id="ref-workers-infra-ref" edge="1" parent="1" source="ref-machine-deployments" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#2563eb;strokeWidth=2.5;endArrow=open;endFill=0;fontSize=20;labelBackgroundColor=#ffffff;exitX=0;exitY=0.7;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Arial;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;" target="ref-machine-templates" value="&lt;font style=&quot;font-size:20px;&quot;&gt;infrastructureRef&lt;/font&gt;">
+          <mxGeometry relative="1" as="geometry" y="-12">
+            <Array as="points">
+              <mxPoint x="2740" y="1359" />
+              <mxPoint x="2740" y="1285" />
+              <mxPoint x="900" y="1285" />
+              <mxPoint x="900" y="1395" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ref-workers-bootstrap-ref" edge="1" parent="1" source="ref-machine-deployments" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#2563eb;strokeWidth=2.5;endArrow=open;endFill=0;fontSize=20;labelBackgroundColor=#ffffff;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.3;entryY=1;entryDx=0;entryDy=0;fontFamily=Arial;rounded=1;arcSize=10;jumpStyle=arc;jumpSize=8;" target="a-kct" value="&lt;font style=&quot;font-size:20px;&quot;&gt;bootstrap.configRef&lt;/font&gt;">
+          <mxGeometry relative="1" as="geometry" y="-12" />
+        </mxCell>
+        <mxCell id="ref-reconcile-workload-addons" edge="1" parent="1" source="75lq0Wn46qkfjBRoJqio-33" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;arcSize=10;jumpStyle=arc;jumpSize=8;strokeColor=#7c3aed;" target="ref-workload-addons">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1980" y="1590" />
+              <mxPoint x="3600" y="1590" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ref-action-workload-addons" connectable="0" parent="ref-reconcile-workload-addons" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontFamily=Arial;fontColor=#0f172a;fontSize=20;spacing=2;shadow=0;" value="&lt;font style=&quot;font-size:20px;&quot;&gt;install /&lt;br&gt;reconcile&lt;/font&gt;" vertex="1">
+          <mxGeometry relative="1" as="geometry" x="0" y="-16" width="130" height="54">
+            <mxPoint x="-65.0" y="-27.0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="detail-75lq0Wn46qkfjBRoJqio-46" value="YAML · ClusterClass" vertex="1" parent="stage-examples" collapsed="1" style="swimlane;html=1;horizontal=1;startSize=48;container=1;collapsible=1;recursiveResize=0;rounded=1;arcSize=8;whiteSpace=wrap;fillColor=#f1f5f9;swimlaneFillColor=#f8fafc;strokeColor=#94a3b8;fontFamily=Arial;fontSize=21;fontStyle=1;fontColor=#334155;align=left;spacingLeft=20;">
+          <mxGeometry x="1000" y="190" width="880" height="60" as="geometry">
+            <mxRectangle x="1000" y="190" width="920" height="542" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <UserObject label="&lt;div style=&quot;background-color:#f8fafc; color:#0f172a;&quot;&gt;&lt;pre style=&quot;margin:0;line-height:1.5;font-family:'JetBrains Mono',monospace;font-size:16px;&quot;&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;apiVersion&lt;/span&gt;: &lt;span style=&quot;color:#0f172a; font-style: italic;&quot;&gt;cluster.x-k8s.io/v1beta2&lt;br&gt;&lt;/span&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;kind&lt;/span&gt;: &lt;span style=&quot;color:#0f172a; font-style: italic;&quot;&gt;ClusterClass&lt;br&gt;&lt;/span&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;metadata&lt;/span&gt;:&lt;br&gt;  &lt;span style=&quot;color:#0f172a;&quot;&gt;name&lt;/span&gt;: composite-v1&lt;br&gt;  &lt;span style=&quot;color:#0f172a;&quot;&gt;namespace&lt;/span&gt;: composite-templates&lt;br&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;spec&lt;/span&gt;:&lt;br&gt;  &lt;b&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;infrastructure&lt;/span&gt;:&lt;br&gt;    &lt;span style=&quot;color:#0f172a;&quot;&gt;templateRef&lt;/span&gt;:&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;apiVersion&lt;/span&gt;: infrastructure.cluster.x-k8s.io/v1beta2&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;kind&lt;/span&gt;: CompositeClusterTemplate&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;name&lt;/span&gt;: composite-v1&lt;br&gt;    &lt;span style=&quot;color:#0f172a;&quot;&gt;naming&lt;/span&gt;:&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;template&lt;/span&gt;: &lt;span style=&quot;color:#0f172a;&quot;&gt;'&lt;/span&gt;&lt;span style=&quot;background-color:#f8fafc;&quot;&gt;{{ .cluster.name }}&lt;/span&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;-infra'&lt;br&gt;&lt;/span&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;  &lt;/span&gt;&lt;span style=&quot;color:#0f172a;&quot;&gt;controlPlane&lt;/span&gt;:&lt;br&gt;    &lt;span style=&quot;color:#0f172a;&quot;&gt;templateRef&lt;/span&gt;:&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;apiVersion&lt;/span&gt;: controlplane.cluster.x-k8s.io/v1alpha1&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;kind&lt;/span&gt;: KamajiControlPlaneTemplate&lt;br&gt;      &lt;span style=&quot;color:#0f172a;&quot;&gt;name&lt;/span&gt;: composite-kamaji-v1&lt;/b&gt;&lt;br&gt;&lt;/pre&gt;&lt;/div&gt;" id="75lq0Wn46qkfjBRoJqio-46">
+          <mxCell parent="detail-75lq0Wn46qkfjBRoJqio-46" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacing=0;fontFamily=monospace;fontSize=16;overflow=visible;" vertex="1">
+            <mxGeometry height="456" width="880" x="20" y="70" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="readability-title" value="Composite cluster architecture" vertex="1" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=42;fontStyle=1;fontColor=#0f172a;spacing=0;">
+          <mxGeometry x="40" y="30" width="2700" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="readability-subtitle" value="Shared configuration → Cluster API → Composite reconciliation → native resources" vertex="1" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=25;fontStyle=1;fontColor=#475569;spacing=0;">
+          <mxGeometry x="40" y="100" width="3000" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="readability-details-hint" value="8 expandable YAML examples below" vertex="1" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=20;fontStyle=1;fontColor=#475569;spacing=0;">
+          <mxGeometry x="2800" y="173" width="1000" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="readability-footer" value="Read stages left to right. Blue dashed arrows are references; they may point back to shared inputs. Native workers remain CAPI-managed." vertex="1" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=22;fontStyle=1;fontColor=#475569;spacing=0;">
+          <mxGeometry x="40" y="2080" width="3840" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="composite-provider-attachments" value="&lt;b&gt;CompositeProvider attachments&lt;/b&gt;&lt;br&gt;osc-paris · ovh-paris · ovh-varsovie&lt;br&gt;templateRef + clusterRef (+ optional credentialsRef)" vertex="1" parent="stage-composite" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ffedd5;strokeColor=#c2410c;fontColor=#0f172a;fontFamily=Arial;fontSize=22;spacing=14;">
+          <mxGeometry x="40" y="120" width="660" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="attachment-cluster-ref" value="clusterRef" edge="1" parent="1" source="composite-provider-attachments" target="75lq0Wn46qkfjBRoJqio-12" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=open;endFill=0;strokeColor=#2563eb;strokeWidth=2.5;fontFamily=Arial;fontSize=20;labelBackgroundColor=#ffffff;rounded=1;jumpStyle=arc;jumpSize=8;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry" y="-12" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Composite cluster infrastructure",
+    "locale": "en",
+    "output": "out/archify/cluster-infrastructure.html",
+    "quality_profile": "showcase",
+    "legend": {
+      "entries": {
+        "external": { "label": "Cluster API resource" },
+        "backend": { "label": "Composition and bootstrap" },
+        "cloud": { "label": "Native infrastructure" }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "cluster",
+      "type": "external",
+      "label": "Cluster",
+      "sublabel": "Cluster API",
+      "pos": [40, 185],
+      "size": [160, 80]
+    },
+    {
+      "id": "composite-cluster",
+      "type": "backend",
+      "label": "CompositeCluster",
+      "sublabel": "Infrastructure meta-provider",
+      "pos": [370, 185],
+      "size": [210, 80]
+    },
+    {
+      "id": "osc-cluster",
+      "type": "cloud",
+      "label": "OscCluster",
+      "sublabel": "Outscale infrastructure",
+      "pos": [760, 40],
+      "size": [270, 80]
+    },
+    {
+      "id": "openstack-cluster",
+      "type": "cloud",
+      "label": "OpenStackCluster",
+      "sublabel": "OpenStack infrastructure",
+      "pos": [760, 185],
+      "size": [270, 80]
+    },
+    {
+      "id": "bootstrap-templates",
+      "type": "backend",
+      "label": "KubeadmConfigTemplates",
+      "sublabel": "One per provider attachment",
+      "pos": [760, 330],
+      "size": [270, 80]
+    }
+  ],
+  "connections": [
+    {
+      "id": "infrastructure-reference",
+      "from": "cluster",
+      "to": "composite-cluster",
+      "label": "infrastructureRef",
+      "variant": "emphasis"
+    },
+    {
+      "id": "owns-outscale",
+      "from": "composite-cluster",
+      "to": "osc-cluster",
+      "label": "owns"
+    },
+    {
+      "id": "owns-openstack",
+      "from": "composite-cluster",
+      "to": "openstack-cluster",
+      "label": "owns"
+    },
+    {
+      "id": "owns-bootstrap",
+      "from": "composite-cluster",
+      "to": "bootstrap-templates",
+      "label": "owns"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One infrastructure reference",
+      "items": [
+        "Cluster.spec.infrastructureRef selects CompositeCluster.",
+        "OscCluster and OpenStackCluster are sibling native infrastructure resources."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Per-attachment bootstrap",
+      "items": [
+        "Each CompositeProvider attachment gets its own KubeadmConfigTemplate.",
+        "Attachments are configured through CompositeProvider, not CompositeCluster."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Ownership, not worker management",
+      "items": [
+        "Generated children have a controller ownerReference to CompositeCluster and a non-controller ownerReference to Cluster.",
+        "Native providers handle cloud operations; CAPI and native providers manage workers."
+      ]
+    }
+  ]
+}

@@ -8,13 +8,9 @@ Composite is a Cluster API infrastructure meta-provider. One `CompositeCluster`
 coordinates native InfraClusters and bootstrap templates behind CAPI's single
 infrastructure reference.
 
-```text
-Cluster
-  infrastructureRef -> CompositeCluster
-                         -> OscCluster
-                         -> OpenStackCluster
-                         -> per-attachment KubeadmConfigTemplates
-```
+![Cluster infrastructureRef points to CompositeCluster, which owns OscCluster, OpenStackCluster and per-attachment KubeadmConfigTemplates.](<docs/diagrams/cluster-infrastructure.svg>)
+
+[Editable Archify source](<docs/diagrams/cluster-infrastructure.architecture.json>).
 
 ## What it provides
 

@@ -50,8 +50,8 @@ implementation. Its immutable intent must identify:
 - The operation type and exact CompositeCluster namespace/name/UID.
 - The provider name and expected old/new provider UIDs. For source rebind, these
   UIDs must be equal; for retired replacement, they must differ.
-- The complete expected committed attachment record, including retirement state,
-  profile UID, credential name and native/bootstrap identities.
+- The complete expected committed and desired attachment records, including
+  retirement state, profile UID, credential name and native/bootstrap identities.
 - Both expected old and desired new source references and UID/generation pairs,
   including an unchanged pair. No wildcard, "latest", name-only or hash consent.
 
